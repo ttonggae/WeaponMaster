@@ -1,7 +1,11 @@
 import { CombatSystem } from "./combat/CombatSystem";
 import { DEFAULT_REMOTE_WEAPON, MAX_DELTA_SECONDS } from "./constants";
 import { FirebaseAuthService } from "./firebase/FirebaseAuth";
-import { getFirebaseServices, type FirebaseServices } from "./firebase/FirebaseApp";
+import {
+  getFirebaseServices,
+  getMissingFirebaseEnvKeys,
+  type FirebaseServices,
+} from "./firebase/FirebaseApp";
 import { FriendlyRoomService } from "./firebase/FriendlyRoomService";
 import { MatchmakingService } from "./firebase/MatchmakingService";
 import { SignalingService } from "./firebase/SignalingService";
@@ -36,6 +40,7 @@ export class Game {
   private firebaseServices: FirebaseServices | null = null;
   private firebaseUserId: string | null = null;
   private matchmakingService: MatchmakingService | null = null;
+  private matchmakingPollId: number | null = null;
   private signalingUnsubs: Unsubscribe[] = [];
   private activeSignalingRoomId: string | null = null;
   private onlineMode: "manual" | "friendly" | "matchmaking" = "manual";
@@ -192,26 +197,22 @@ export class Game {
     this.matchmakingService = new MatchmakingService(services, this.clientSessionId);
     const immediateRoom = await this.matchmakingService.joinQueue(uid);
     if (immediateRoom) {
-      await (this.isHostForRoom(immediateRoom, uid)
-        ? this.startSignaledHost("matchRooms", immediateRoom)
-        : this.startSignaledGuest("matchRooms", immediateRoom));
+      await this.startMatchedRoom(immediateRoom, uid);
       return;
     }
-    this.connectionPanel.setStatus("Waiting for opponent");
+    this.connectionPanel.setStatus("Waiting for opponent. Queue joined.");
     this.signalingUnsubs.push(
       this.matchmakingService.watchMatchForPlayer(uid, (room) => {
-        if (this.isHostForRoom(room, uid)) {
-          void this.startSignaledHost("matchRooms", room);
-          return;
-        }
-        if (this.isGuestForRoom(room, uid)) {
-          void this.startSignaledGuest("matchRooms", room);
-        }
+        void this.startMatchedRoom(room, uid);
+      }, (error) => {
+        this.connectionPanel.setStatus(`Match listener failed: ${error.message}`);
       }),
     );
+    this.startMatchmakingPolling(uid);
   }
 
   private async cancelMatchmaking(): Promise<void> {
+    this.stopMatchmakingPolling();
     await this.matchmakingService?.cancel();
     this.clearSignalingWatchers();
     this.activeSignalingRoomId = null;
@@ -225,6 +226,7 @@ export class Game {
       return;
     }
     this.activeSignalingRoomId = room.id;
+    this.stopMatchmakingPolling();
     const services = await this.ensureFirebase();
     this.clearSignalingWatchers();
     this.setupP2P("p1");
@@ -256,6 +258,7 @@ export class Game {
       return;
     }
     this.activeSignalingRoomId = room.id;
+    this.stopMatchmakingPolling();
     const services = await this.ensureFirebase();
     this.clearSignalingWatchers();
     this.setupP2P("p2");
@@ -295,7 +298,9 @@ export class Game {
     this.connectionPanel.setStatus("Connecting to Firebase");
     this.firebaseServices = this.firebaseServices ?? getFirebaseServices();
     if (!this.firebaseServices) {
-      throw new Error("Firebase env is missing. Manual P2P still works.");
+      const missing = getMissingFirebaseEnvKeys();
+      const details = missing.length > 0 ? ` Missing: ${missing.join(", ")}` : "";
+      throw new Error(`Firebase env is missing. Manual P2P still works.${details}`);
     }
     return this.firebaseServices;
   }
@@ -331,6 +336,7 @@ export class Game {
   }
 
   private closeP2P(): void {
+    this.stopMatchmakingPolling();
     this.clearSignalingWatchers();
     this.p2p?.close();
     this.p2p = null;
@@ -366,6 +372,50 @@ export class Game {
       return room.guestSessionId === this.clientSessionId;
     }
     return room.guestId === uid;
+  }
+
+  private async startMatchedRoom(room: SignalingRoom, uid: string): Promise<void> {
+    if (this.isHostForRoom(room, uid)) {
+      await this.startSignaledHost("matchRooms", room);
+      return;
+    }
+    if (this.isGuestForRoom(room, uid)) {
+      await this.startSignaledGuest("matchRooms", room);
+      return;
+    }
+    this.connectionPanel.setStatus("Matched room ignored: session mismatch.");
+  }
+
+  private startMatchmakingPolling(uid: string): void {
+    this.stopMatchmakingPolling();
+    const poll = async (): Promise<void> => {
+      if (!this.matchmakingService || this.activeSignalingRoomId) {
+        return;
+      }
+      try {
+        const room = await this.matchmakingService.tryCreateMatch(uid);
+        if (room) {
+          await this.startMatchedRoom(room, uid);
+        }
+      } catch (error) {
+        this.stopMatchmakingPolling();
+        this.connectionPanel.setStatus(
+          error instanceof Error ? `Matchmaking failed: ${error.message}` : "Matchmaking failed.",
+        );
+      }
+    };
+
+    this.matchmakingPollId = window.setInterval(() => {
+      void poll();
+    }, 1500);
+  }
+
+  private stopMatchmakingPolling(): void {
+    if (this.matchmakingPollId === null) {
+      return;
+    }
+    window.clearInterval(this.matchmakingPollId);
+    this.matchmakingPollId = null;
   }
 
   private getMouseAim(): { x: number; y: number } {

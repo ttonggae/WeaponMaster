@@ -12,7 +12,7 @@ export function getFirebaseServices(): FirebaseServices | null {
   const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID as string | undefined;
   const appId = import.meta.env.VITE_FIREBASE_APP_ID as string | undefined;
 
-  if (!apiKey || !authDomain || !projectId || !appId) {
+  if (getMissingFirebaseEnvKeys().length > 0) {
     return null;
   }
 
@@ -33,4 +33,15 @@ export function getFirebaseServices(): FirebaseServices | null {
     app,
     db: getFirestore(app),
   };
+}
+
+export function getMissingFirebaseEnvKeys(): string[] {
+  const required = [
+    "VITE_FIREBASE_API_KEY",
+    "VITE_FIREBASE_AUTH_DOMAIN",
+    "VITE_FIREBASE_PROJECT_ID",
+    "VITE_FIREBASE_APP_ID",
+  ] as const;
+
+  return required.filter((key) => !import.meta.env[key]);
 }

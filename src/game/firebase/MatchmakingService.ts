@@ -6,8 +6,7 @@ import {
   getDocs,
   limit,
   query,
-  setDoc,
-  updateDoc,
+  runTransaction,
   onSnapshot,
   type Unsubscribe,
   where,
@@ -17,7 +16,8 @@ import type { FirebaseServices } from "./FirebaseApp";
 
 const QUEUE_TTL_MS = 2 * 60 * 1000;
 const ROOM_TTL_MS = 10 * 60 * 1000;
-const MATCH_SEARCH_LIMIT = 8;
+const MATCH_SEARCH_LIMIT = 16;
+const STALE_MATCH_ERROR = "MATCH_QUEUE_STALE";
 
 export class MatchmakingService {
   private queueDocId: string | null = null;
@@ -30,6 +30,15 @@ export class MatchmakingService {
   async joinQueue(playerId: string): Promise<SignalingRoom | null> {
     await this.cleanupOldQueueEntries();
     await this.cleanupOldRooms();
+    await this.ensureQueueEntry(playerId);
+    return this.tryCreateMatch(playerId);
+  }
+
+  async tryCreateMatch(playerId: string): Promise<SignalingRoom | null> {
+    if (!this.queueDocId) {
+      return null;
+    }
+
     const waiting = await getDocs(
       query(
         collection(this.services.db, "matchQueue"),
@@ -42,25 +51,60 @@ export class MatchmakingService {
     const opponent = waiting.docs
       .filter((entry) => entry.data().sessionId !== this.sessionId)
       .sort((a, b) => Number(a.data().createdAt ?? 0) - Number(b.data().createdAt ?? 0))[0];
-    if (opponent) {
-      const opponentId = opponent.data().playerId as string;
-      const opponentSessionId = opponent.data().sessionId as string | undefined;
-      await updateDoc(opponent.ref, { status: "matched" });
-      const roomId = `match-${now}-${Math.floor(Math.random() * 100000)}`;
-      const room: SignalingRoom = {
-        id: roomId,
-        status: "matched",
-        hostId: opponentId,
-        guestId: playerId,
-        hostSessionId: opponentSessionId ?? "",
-        guestSessionId: this.sessionId,
-        createdAt: now,
-        expiresAt: now + ROOM_TTL_MS,
-      };
-      await setDoc(doc(this.services.db, "matchRooms", roomId), room);
-      return room;
+    if (!opponent) {
+      return null;
     }
 
+    const opponentId = opponent.data().playerId as string;
+    const opponentSessionId = opponent.data().sessionId as string | undefined;
+    const roomId = `match-${now}-${Math.floor(Math.random() * 100000)}`;
+    const room: SignalingRoom = {
+      id: roomId,
+      status: "matched",
+      hostId: opponentId,
+      guestId: playerId,
+      hostSessionId: opponentSessionId ?? "",
+      guestSessionId: this.sessionId,
+      createdAt: now,
+      expiresAt: now + ROOM_TTL_MS,
+    };
+
+    try {
+      await runTransaction(this.services.db, async (transaction) => {
+        const ownRef = doc(this.services.db, "matchQueue", this.queueDocId!);
+        const roomRef = doc(this.services.db, "matchRooms", roomId);
+        const ownSnapshot = await transaction.get(ownRef);
+        const opponentSnapshot = await transaction.get(opponent.ref);
+
+        if (
+          !ownSnapshot.exists() ||
+          !opponentSnapshot.exists() ||
+          ownSnapshot.data().status !== "waiting" ||
+          opponentSnapshot.data().status !== "waiting"
+        ) {
+          throw new Error(STALE_MATCH_ERROR);
+        }
+
+        transaction.update(ownRef, { status: "matched", roomId });
+        transaction.update(opponent.ref, { status: "matched", roomId });
+        transaction.set(roomRef, room);
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === STALE_MATCH_ERROR) {
+        return null;
+      }
+      throw error;
+    }
+
+    this.queueDocId = null;
+    return room;
+  }
+
+  async ensureQueueEntry(playerId: string): Promise<void> {
+    if (this.queueDocId) {
+      return;
+    }
+    const now = Date.now();
     const queueRef = await addDoc(collection(this.services.db, "matchQueue"), {
       playerId,
       sessionId: this.sessionId,
@@ -69,7 +113,6 @@ export class MatchmakingService {
       expiresAt: now + QUEUE_TTL_MS,
     });
     this.queueDocId = queueRef.id;
-    return null;
   }
 
   async cancel(): Promise<void> {
@@ -80,7 +123,11 @@ export class MatchmakingService {
     this.queueDocId = null;
   }
 
-  watchMatchForPlayer(playerId: string, callback: (room: SignalingRoom) => void): Unsubscribe {
+  watchMatchForPlayer(
+    playerId: string,
+    callback: (room: SignalingRoom) => void,
+    onError?: (error: Error) => void,
+  ): Unsubscribe {
     const hostQuery = query(collection(this.services.db, "matchRooms"), where("hostId", "==", playerId));
     const guestQuery = query(collection(this.services.db, "matchRooms"), where("guestId", "==", playerId));
     const notifyIfActive = (room: SignalingRoom): void => {
@@ -92,10 +139,10 @@ export class MatchmakingService {
     const unsubs = [
       onSnapshot(hostQuery, (snapshot) => {
         snapshot.docs.forEach((entry) => notifyIfActive(entry.data() as SignalingRoom));
-      }),
+      }, onError),
       onSnapshot(guestQuery, (snapshot) => {
         snapshot.docs.forEach((entry) => notifyIfActive(entry.data() as SignalingRoom));
-      }),
+      }, onError),
     ];
     return () => unsubs.forEach((unsub) => unsub());
   }
