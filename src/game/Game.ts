@@ -43,6 +43,8 @@ export class Game {
   private matchmakingPollId: number | null = null;
   private signalingUnsubs: Unsubscribe[] = [];
   private activeSignalingRoomId: string | null = null;
+  private activeSignalingCollection: "friendlyRooms" | "matchRooms" | null = null;
+  private signalingCleanupTimer: number | null = null;
   private onlineMode: "manual" | "friendly" | "matchmaking" = "manual";
   private readonly clientSessionId = crypto.randomUUID();
 
@@ -170,6 +172,8 @@ export class Game {
       this.connectionPanel.setStatus(detail ? `${status}: ${detail}` : status);
       if (status === "connected") {
         this.trySendReady();
+        this.connectionPanel.hide();
+        this.scheduleSignalingCleanup();
       }
     });
   }
@@ -215,6 +219,7 @@ export class Game {
     this.stopMatchmakingPolling();
     await this.matchmakingService?.cancel();
     this.clearSignalingWatchers();
+    void this.cleanupActiveSignalingRoom();
     this.activeSignalingRoomId = null;
   }
 
@@ -225,11 +230,11 @@ export class Game {
     if (this.activeSignalingRoomId === room.id) {
       return;
     }
-    this.activeSignalingRoomId = room.id;
     this.stopMatchmakingPolling();
     const services = await this.ensureFirebase();
-    this.clearSignalingWatchers();
     this.setupP2P("p1");
+    this.activeSignalingRoomId = room.id;
+    this.activeSignalingCollection = collectionName;
     this.state.startDuel("p2p", this.localP2PWeapon, this.fallbackRemoteWeapon);
     const signaling = new SignalingService(services, collectionName);
     this.p2p?.onIceCandidate((candidate) => {
@@ -257,11 +262,11 @@ export class Game {
     if (this.activeSignalingRoomId === room.id) {
       return;
     }
-    this.activeSignalingRoomId = room.id;
     this.stopMatchmakingPolling();
     const services = await this.ensureFirebase();
-    this.clearSignalingWatchers();
     this.setupP2P("p2");
+    this.activeSignalingRoomId = room.id;
+    this.activeSignalingCollection = collectionName;
     this.state.startDuel("p2p", this.fallbackRemoteWeapon, this.localP2PWeapon);
     const signaling = new SignalingService(services, collectionName);
     let answered = false;
@@ -332,11 +337,11 @@ export class Game {
     this.state.connectionStatus = "offline";
     this.connectionPanel.hide();
     this.menu.show();
-    this.activeSignalingRoomId = null;
   }
 
   private closeP2P(): void {
     this.stopMatchmakingPolling();
+    void this.cleanupActiveSignalingRoom();
     this.clearSignalingWatchers();
     this.p2p?.close();
     this.p2p = null;
@@ -416,6 +421,52 @@ export class Game {
     }
     window.clearInterval(this.matchmakingPollId);
     this.matchmakingPollId = null;
+  }
+
+  private scheduleSignalingCleanup(): void {
+    const roomId = this.activeSignalingRoomId;
+    const collectionName = this.activeSignalingCollection;
+    if (!roomId || !collectionName) {
+      return;
+    }
+
+    const services = this.firebaseServices ?? getFirebaseServices();
+    if (services) {
+      void new SignalingService(services, collectionName).markConnected(roomId);
+    }
+
+    if (this.signalingCleanupTimer !== null) {
+      window.clearTimeout(this.signalingCleanupTimer);
+    }
+    this.signalingCleanupTimer = window.setTimeout(() => {
+      void this.cleanupActiveSignalingRoom();
+    }, 8000);
+  }
+
+  private async cleanupActiveSignalingRoom(): Promise<void> {
+    const roomId = this.activeSignalingRoomId;
+    const collectionName = this.activeSignalingCollection;
+    if (this.signalingCleanupTimer !== null) {
+      window.clearTimeout(this.signalingCleanupTimer);
+      this.signalingCleanupTimer = null;
+    }
+    if (!roomId || !collectionName) {
+      return;
+    }
+
+    this.activeSignalingRoomId = null;
+    this.activeSignalingCollection = null;
+    this.clearSignalingWatchers();
+
+    const services = this.firebaseServices ?? getFirebaseServices();
+    if (!services) {
+      return;
+    }
+    try {
+      await new SignalingService(services, collectionName).cleanupRoom(roomId);
+    } catch {
+      // Cleanup is best effort; stale rooms are also removed by TTL cleanup.
+    }
   }
 
   private getMouseAim(): { x: number; y: number } {

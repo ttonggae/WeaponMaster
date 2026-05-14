@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import type { SignalingRoom } from "../net/SignalingTypes";
 import type { FirebaseServices } from "./FirebaseApp";
+import { SignalingService } from "./SignalingService";
 
 const QUEUE_TTL_MS = 2 * 60 * 1000;
 const ROOM_TTL_MS = 10 * 60 * 1000;
@@ -85,8 +86,8 @@ export class MatchmakingService {
           throw new Error(STALE_MATCH_ERROR);
         }
 
-        transaction.update(ownRef, { status: "matched", roomId });
-        transaction.update(opponent.ref, { status: "matched", roomId });
+        transaction.delete(ownRef);
+        transaction.delete(opponent.ref);
         transaction.set(roomRef, room);
       });
     } catch (error) {
@@ -158,6 +159,7 @@ export class MatchmakingService {
     const expired = await getDocs(
       query(collection(this.services.db, "matchRooms"), where("expiresAt", "<", Date.now())),
     );
-    await Promise.all(expired.docs.map((entry) => deleteDoc(entry.ref)));
+    const signaling = new SignalingService(this.services, "matchRooms");
+    await Promise.all(expired.docs.map((entry) => signaling.cleanupRoom(entry.id)));
   }
 }

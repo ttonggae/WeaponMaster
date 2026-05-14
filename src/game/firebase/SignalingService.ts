@@ -1,7 +1,9 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   setDoc,
   updateDoc,
@@ -77,5 +79,18 @@ export class SignalingService {
 
   async createMatchRoom(room: SignalingRoom): Promise<void> {
     await setDoc(doc(this.services.db, this.roomCollection, room.id), room);
+  }
+
+  async cleanupRoom(roomId: string): Promise<void> {
+    const candidateCollections = ["hostCandidates", "guestCandidates"];
+    await Promise.all(
+      candidateCollections.map(async (candidateCollection) => {
+        const snapshot = await getDocs(
+          collection(this.services.db, this.roomCollection, roomId, candidateCollection),
+        );
+        await Promise.all(snapshot.docs.map((entry) => deleteDoc(entry.ref)));
+      }),
+    );
+    await deleteDoc(doc(this.services.db, this.roomCollection, roomId));
   }
 }

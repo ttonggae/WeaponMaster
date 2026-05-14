@@ -5,6 +5,11 @@ type MessageHandler = (message: NetMessage) => void;
 type StatusHandler = (status: ConnectionStatus, detail?: string) => void;
 type IceCandidateHandler = (candidate: RTCIceCandidateInit) => void;
 
+const ICE_SERVERS: RTCIceServer[] = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:global.stun.twilio.com:3478" },
+];
+
 export class P2PClient {
   private peer: RTCPeerConnection | null = null;
   private channel: RTCDataChannel | null = null;
@@ -89,9 +94,9 @@ export class P2PClient {
   }
 
   private createPeer(): RTCPeerConnection {
-    // No signaling/STUN/TURN server is used in the MVP. This keeps startup serverless
-    // but cannot solve all NAT cases.
-    const peer = new RTCPeerConnection({ iceServers: [] });
+    // Public STUN improves direct P2P reachability. This is still not a relay or
+    // cheat authority; restrictive NATs may require a later TURN service.
+    const peer = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     this.peer = peer;
 
     peer.ondatachannel = (event) => {
