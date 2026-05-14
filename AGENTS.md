@@ -4,21 +4,20 @@
 
 - `index.html`: Canvas and UI root.
 - `src/main.ts`: Browser entry point.
-- `src/style.css`: Global layout and menu styles.
-- `src/game/Game.ts`: Main loop, mode switching, and P2P input routing.
-- `src/game/constants.ts`: Named gameplay and render constants. Avoid unexplained magic numbers elsewhere.
-- `src/game/types.ts`: Shared gameplay, geometry, input, weapon, effect, and network-facing types.
+- `src/style.css`: Global layout, menu, connection panel, and matchmaking overlay styles.
+- `src/game/Game.ts`: Main loop, mode switching, WebRTC setup, Firebase matchmaking flow, and ranked result routing.
+- `src/game/constants.ts`: Named gameplay, rank, and render constants. Avoid unexplained magic numbers elsewhere.
+- `src/game/types.ts`: Shared gameplay, geometry, input, weapon, effect, auth, ranking, and network-facing types.
 - `src/game/state/`: Duel and player state containers.
 - `src/game/combat/`: Combat orchestration plus stamina, guard, parry, and hitbox systems.
 - `src/game/arena/`: Arena data and movement bounds.
 - `src/game/camera/`: World/screen camera transform and follow logic.
-- `src/game/weapons/`: Weapon definitions and per-weapon tuning.
-- `src/game/weapons/WeaponPoseSystem.ts`: Shared fixed-length weapon pose calculation for rendering, character posing, and hit detection.
-- `src/game/input/`: Keyboard state and configurable keybinds.
-- `src/game/render/`: Canvas renderers. `WeaponRenderer` owns the weapon segment calculation used by hit detection.
-- `src/game/net/`: WebRTC DataChannel, message types, and state sync.
-- `src/game/firebase/`: Firebase anonymous auth, matchmaking, friendly rooms, and signaling.
-- `src/game/ui/`: DOM menu, weapon selection, and connection panel.
+- `src/game/weapons/`: Weapon definitions, tuning, and shared weapon pose system.
+- `src/game/input/`: Keyboard/mouse state and configurable keybinds.
+- `src/game/render/`: Canvas renderers. Rendering must consume the same weapon pose data used by hit detection.
+- `src/game/net/`: WebRTC DataChannel, message types, signaling types, and state sync.
+- `src/game/firebase/`: Firebase app init, Google auth, matchmaking, friendly rooms, signaling, room codes, and rank service.
+- `src/game/ui/`: DOM menu, weapon selection, friendly room panel, and matchmaking overlay.
 
 ## Run Commands
 
@@ -45,24 +44,25 @@ npm run build
 
 Manual checks:
 
-- The menu only exposes the local player's own weapon selection.
-- Online Matchmaking, Friendly Match, and P2P Duel each open only their own panel.
-- Both fighters are visible.
-- Longsword, spear, and axe can be selected.
+- The menu exposes exactly three modes: Ranked Match, Casual Match, Friendly Match.
+- Ranked/Casual immediately start matchmaking and show the centered matchmaking overlay.
+- Friendly Match opens only the 6-character room-code panel.
+- Google sign-in starts when entering an online mode.
+- Season Top 10 renders when Firebase/Firestore rules are configured.
+- Matchmaking UI and friendly panel hide after WebRTC connects.
+- Both fighters are visible after connection.
+- Longsword, spear, and axe can be selected for the local player.
 - The arena is wider than the viewport and the camera follows the local player smoothly.
 - Mouse aim remains accurate after the camera moves.
-- Mouse movement changes the visible weapon pose.
-- Left click starts charge and automatically releases into attack.
 - Health and stamina change correctly.
 - Attack, guard, parry, feint, guard break, guard impact, and kick work.
 - Hit, guard, parry, and weapon clash effects are visually distinct.
-- P2P panel can create an offer, create an answer from a pasted offer, and accept a pasted answer.
-- Firebase env missing should not break the menu or manual P2P panel.
+- Ranked match completion writes one local result and refreshes the leaderboard.
 
 ## Coding Rules
 
 - Keep TypeScript `strict` clean.
-- Keep gameplay logic, rendering, input, network, weapon data, combat rules, and UI separated.
+- Keep gameplay logic, rendering, input, network, weapon data, combat rules, Firebase services, ranking, and UI separated.
 - Prefer small modules with explicit data flow over hidden globals.
 - Put tunable numbers in `constants.ts` or `weaponData.ts`.
 - Use short comments only for non-obvious decisions.
@@ -87,15 +87,24 @@ Manual checks:
 
 ## Network Sync Rules
 
-- MVP uses WebRTC DataChannel with manual offer/answer copy.
-- Firebase may be used for anonymous auth, matchmaking queue, friendly room code, and WebRTC signaling only.
+- Ranked, casual, and friendly room setup use Firebase for identity, queue/room metadata, and WebRTC signaling.
+- Combat input and core state sync must use WebRTC DataChannel first.
 - Firebase must not be treated as a combat authority server.
 - Firebase config must come from environment variables or local config, never hardcoded secrets.
+- Google auth is used instead of anonymous auth for stable player identity.
 - There is no full server authority in the MVP.
 - Each peer simulates from local and remote input snapshots.
 - Peers exchange periodic checksums and compact core-state snapshots.
 - Large drift may be corrected for the remote-controlled player.
-- Perfect cheat prevention is not possible in this architecture; keep validation and checksums explicit so future server authority or rollback can be added.
+- Perfect cheat prevention is not possible in this architecture; keep validation and checksums explicit so future server authority, Cloud Functions validation, or rollback can be added.
+
+## Ranking Rules
+
+- `CURRENT_SEASON_ID` in `constants.ts` selects the active season.
+- Ranked wins add score and ranked losses subtract score.
+- Leaderboard queries only the top 10 records for the active season.
+- Rank records below top 10 may be deleted after result writes.
+- Client-side rank writes are MVP-only and must stay isolated for future trusted validation.
 
 ## Forbidden
 
@@ -106,13 +115,17 @@ Manual checks:
 - Do not turn the game into a fast, light arcade fighter.
 - Do not introduce complex jointed character animation for the MVP.
 - Do not make P2P work by destabilizing core combat.
+- Do not reintroduce anonymous identity for ranked records.
 
 ## Done Criteria
 
 - `npm install` succeeds.
 - `npm run dev` starts Vite.
 - `npm run build` succeeds.
-- Two characters render on screen.
+- Menu shows only Ranked Match, Casual Match, Friendly Match.
+- Ranked/Casual matchmaking overlay appears in the center immediately after click.
+- Friendly room code create/join works.
+- Two characters render after connection.
 - Wide arena and smooth camera are active.
 - Only the local player's weapon selection is exposed in the menu.
 - Longsword, spear, and axe work.
@@ -120,7 +133,7 @@ Manual checks:
 - Health and stamina work.
 - Attack, guard, parry, feint, guard break, guard impact, and kick work.
 - Visible weapon geometry drives hit detection.
-- Friendly room and matchmaking Firebase structures exist and fail gracefully without config.
-- Manual WebRTC P2P UI exists.
+- Firebase matchmaking, friendly room, signaling, Google auth, and rank service fail gracefully without config.
+- Season Top 10 leaderboard exists.
 - Code is separated by responsibility.
-- README documents run steps and controls.
+- README documents run steps, Firebase setup, controls, modes, and ranking.

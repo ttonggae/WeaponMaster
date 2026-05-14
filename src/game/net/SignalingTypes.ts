@@ -1,3 +1,5 @@
+import type { MatchType } from "../types";
+
 export type OnlineStatus =
   | "Offline"
   | "Connecting to Firebase"
@@ -19,6 +21,7 @@ export interface SignalingRoom {
   guestId?: string;
   hostSessionId?: string;
   guestSessionId?: string;
+  matchType?: MatchType;
   offer?: RTCSessionDescriptionInit;
   answer?: RTCSessionDescriptionInit;
   createdAt: number;

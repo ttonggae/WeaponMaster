@@ -12,6 +12,7 @@ import {
   where,
 } from "firebase/firestore";
 import type { SignalingRoom } from "../net/SignalingTypes";
+import type { MatchType } from "../types";
 import type { FirebaseServices } from "./FirebaseApp";
 import { SignalingService } from "./SignalingService";
 
@@ -28,14 +29,14 @@ export class MatchmakingService {
     private readonly sessionId: string,
   ) {}
 
-  async joinQueue(playerId: string): Promise<SignalingRoom | null> {
+  async joinQueue(playerId: string, matchType: MatchType): Promise<SignalingRoom | null> {
     await this.cleanupOldQueueEntries();
     await this.cleanupOldRooms();
-    await this.ensureQueueEntry(playerId);
-    return this.tryCreateMatch(playerId);
+    await this.ensureQueueEntry(playerId, matchType);
+    return this.tryCreateMatch(playerId, matchType);
   }
 
-  async tryCreateMatch(playerId: string): Promise<SignalingRoom | null> {
+  async tryCreateMatch(playerId: string, matchType: MatchType): Promise<SignalingRoom | null> {
     if (!this.queueDocId) {
       return null;
     }
@@ -51,6 +52,7 @@ export class MatchmakingService {
     const now = Date.now();
     const opponent = waiting.docs
       .filter((entry) => entry.data().sessionId !== this.sessionId)
+      .filter((entry) => entry.data().matchType === matchType)
       .sort((a, b) => Number(a.data().createdAt ?? 0) - Number(b.data().createdAt ?? 0))[0];
     if (!opponent) {
       return null;
@@ -66,6 +68,7 @@ export class MatchmakingService {
       guestId: playerId,
       hostSessionId: opponentSessionId ?? "",
       guestSessionId: this.sessionId,
+      matchType,
       createdAt: now,
       expiresAt: now + ROOM_TTL_MS,
     };
@@ -101,7 +104,7 @@ export class MatchmakingService {
     return room;
   }
 
-  async ensureQueueEntry(playerId: string): Promise<void> {
+  async ensureQueueEntry(playerId: string, matchType: MatchType): Promise<void> {
     if (this.queueDocId) {
       return;
     }
@@ -109,6 +112,7 @@ export class MatchmakingService {
     const queueRef = await addDoc(collection(this.services.db, "matchQueue"), {
       playerId,
       sessionId: this.sessionId,
+      matchType,
       status: "waiting",
       createdAt: now,
       expiresAt: now + QUEUE_TTL_MS,
@@ -126,13 +130,19 @@ export class MatchmakingService {
 
   watchMatchForPlayer(
     playerId: string,
+    matchType: MatchType,
     callback: (room: SignalingRoom) => void,
     onError?: (error: Error) => void,
   ): Unsubscribe {
     const hostQuery = query(collection(this.services.db, "matchRooms"), where("hostId", "==", playerId));
     const guestQuery = query(collection(this.services.db, "matchRooms"), where("guestId", "==", playerId));
     const notifyIfActive = (room: SignalingRoom): void => {
-      if (room.expiresAt <= Date.now() || room.status === "closed" || room.status === "expired") {
+      if (
+        room.expiresAt <= Date.now() ||
+        room.status === "closed" ||
+        room.status === "expired" ||
+        room.matchType !== matchType
+      ) {
         return;
       }
       callback(room);

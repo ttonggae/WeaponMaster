@@ -21,7 +21,7 @@ export class UIRenderer {
     ctx.fillStyle = "#cdbd98";
     ctx.font = "16px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("P2P Duel", LOGICAL_WIDTH / 2, 42);
+    ctx.fillText("Online Duel", LOGICAL_WIDTH / 2, 42);
 
     this.drawBottomInfo(ctx, state);
 

@@ -11,6 +11,7 @@ export type ActionState =
   | "guardBreak"
   | "stunned";
 export type WeaponType = "longsword" | "spear" | "axe";
+export type MatchType = "ranked" | "casual" | "friendly";
 export type AttackVariant = "overhead" | "thrust" | "upswing" | "chop";
 export type DuelMode = "menu" | "p2p";
 export type ConnectionStatus =
@@ -142,4 +143,19 @@ export interface KeyBindings {
   guardBreak: string;
   moveLeft: string;
   moveRight: string;
+}
+
+export interface AuthProfile {
+  uid: string;
+  displayName: string;
+  photoURL: string | null;
+}
+
+export interface LeaderboardEntry {
+  uid: string;
+  displayName: string;
+  score: number;
+  wins: number;
+  losses: number;
+  updatedAt: number;
 }

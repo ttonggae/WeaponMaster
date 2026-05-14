@@ -1,6 +1,6 @@
 # WeaponMaster
 
-WeaponMaster is a browser-based 1v1 medieval duel prototype built with Vite, TypeScript, and HTML Canvas 2D. The MVP focuses on slow, readable weapon commitment, stamina pressure, visible-weapon hit detection, Firebase-assisted matchmaking/friendly rooms, and manual WebRTC P2P setup.
+WeaponMaster is a browser-based 1v1 medieval duel prototype built with Vite, TypeScript, and HTML Canvas 2D. The MVP focuses on slow weapon commitment, stamina pressure, visible-weapon hit detection, Firebase-assisted matchmaking, friendly room codes, and WebRTC DataChannel combat sync.
 
 ## Run
 
@@ -34,32 +34,19 @@ After building, static preview extensions should open `dist/index.html`, not the
 
 This project includes `.github/workflows/deploy.yml`. Push the repository to the `main` branch, then set the repository Pages source to GitHub Actions.
 
-First push:
-
-```bash
-git init
-git branch -M main
-git add .
-git commit -m "Initial WeaponMaster MVP"
-git remote add origin https://github.com/YOUR_NAME/WeaponMaster.git
-git push -u origin main
-```
-
 In GitHub:
 
 1. Open the repository.
 2. Go to `Settings > Pages`.
 3. Set `Build and deployment > Source` to `GitHub Actions`.
 4. Go to `Settings > Secrets and variables > Actions > Variables`.
-5. Add the `VITE_FIREBASE_*` repository variables from `.env` if online matchmaking/friendly rooms should work on the deployed site.
+5. Add the `VITE_FIREBASE_*` repository variables from `.env` if online modes should work on the deployed site.
 
 For a project page like `https://YOUR_NAME.github.io/WeaponMaster/`, the workflow sets `VITE_BASE_PATH` to `/<repo-name>/`. If this is deployed as a user page repository named `YOUR_NAME.github.io`, change `VITE_BASE_PATH` in the workflow to `/`.
 
 Firebase console also needs the deployed domain in `Authentication > Settings > Authorized domains`, for example `YOUR_NAME.github.io`.
 
 ## Controls
-
-Player:
 
 - Aim weapon: mouse movement
 - Move: `A` / `D`
@@ -70,17 +57,112 @@ Player:
 - Kick: `F`
 - Guard break: `E`
 
+## Game Modes
+
+- `Ranked Match`: starts matchmaking immediately from the main menu. Requires Google sign-in. A completed ranked duel updates the seasonal score.
+- `Casual Match`: starts matchmaking immediately from the main menu. Requires Google sign-in for stable identity, but does not change score.
+- `Friendly Match`: opens the room-code panel. Create a 6-character code or join a code from another player.
+
+There is no local duel or manual copy/paste P2P entry point in the current UI. Firebase is used for identity, queue/room metadata, and WebRTC signaling. Actual combat input/state sync still uses WebRTC DataChannel.
+
+## Ranking
+
+- Current season id: `CURRENT_SEASON_ID` in `src/game/constants.ts`.
+- Base score: `1000`.
+- Win: `+25`.
+- Loss: `-15`.
+- Leaderboard: top 10 ranked records for the current season.
+- After ranked result writes, entries below rank 10 are trimmed from Firestore.
+
+To reset for a new season, change `CURRENT_SEASON_ID` to a new value such as `season-2`. The old season stays in Firestore under its own path unless manually deleted.
+
+Rank writes are client-side in this MVP, so they are not cheat-proof. The rank service is isolated so a later Cloud Functions validator or server-authoritative result service can replace direct client writes.
+
 ## Current MVP
 
-- Main menu only lets each player choose their own weapon.
-- Online matchmaking, friendly room, and manual P2P duel entry points.
+- Main menu has exactly three modes: Ranked Match, Casual Match, Friendly Match.
+- Ranked/Casual show a centered matchmaking overlay while searching.
+- Matchmaking UI is hidden once WebRTC connects and the duel begins.
+- Season Top 10 leaderboard is shown on the main menu when Firebase is configured.
+- Google sign-in replaces anonymous auth to avoid confusing player identity.
 - Wide arena with a smooth player-focused camera and separated world/screen coordinates.
 - Longsword, spear, and axe weapon data with mouse-driven weapon posture.
 - Health, stamina, charge, attack, guard, parry, feint, kick, stun, hitstop, camera shake, and impact effects.
 - `WeaponPoseSystem` calculates fixed-length weapon pose data shared by character posing, weapon rendering, and hit detection.
 - Hit, guard, and parry checks use the same blade/tip/head strike zones that are drawn on screen.
-- Manual WebRTC DataChannel panel with offer/answer copy flow, input messages, and periodic state checksum/core-state exchange.
-- Firebase anonymous auth, friendly room code, matchmaking queue, and WebRTC signaling scaffolding. Combat input/state still uses WebRTC DataChannel.
+
+## Firebase Setup
+
+Create a `.env` file using `.env.example` and provide:
+
+```bash
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_APP_ID=...
+VITE_FIREBASE_STORAGE_BUCKET=...
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_FIREBASE_MEASUREMENT_ID=...
+VITE_FIREBASE_DATABASE_URL=...
+```
+
+Required Firebase console setup:
+
+1. `Authentication > Sign-in method`: enable `Google`.
+2. `Authentication > Settings > Authorized domains`: add local/deployed domains as needed, for example `localhost` and `ttonggae.github.io`.
+3. Create a Cloud Firestore database.
+4. Use rules that allow signed-in players to use matchmaking/signaling and allow public leaderboard reads.
+
+MVP Firestore rules:
+
+```js
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function validCandidateCollection(name) {
+      return name == "hostCandidates" || name == "guestCandidates";
+    }
+
+    match /matchQueue/{queueId} {
+      allow read, create, update, delete: if signedIn();
+    }
+
+    match /matchRooms/{roomId} {
+      allow read, create, update, delete: if signedIn();
+
+      match /{candidateCollection}/{candidateId} {
+        allow read, create, update, delete:
+          if signedIn() && validCandidateCollection(candidateCollection);
+      }
+    }
+
+    match /friendlyRooms/{roomId} {
+      allow read, create, update, delete: if signedIn();
+
+      match /{candidateCollection}/{candidateId} {
+        allow read, create, update, delete:
+          if signedIn() && validCandidateCollection(candidateCollection);
+      }
+    }
+
+    match /rankings/{seasonId}/players/{uid} {
+      allow read: if true;
+      allow create, update, delete: if signedIn();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+```
+
+The ranking write/delete rule is intentionally permissive for the MVP because top-10 trimming is currently client-side. Tighten this when rank validation moves to Cloud Functions or a trusted server.
 
 ## Design Notes
 
@@ -90,32 +172,7 @@ Left click starts a fixed attack sequence: charge, attack, recovery, then idle. 
 
 Mouse distance does not change weapon length. The mouse only defines the target direction. `WeaponPoseSystem` normalizes the hand-to-mouse direction and applies the weapon's fixed `length`, so the rendered weapon and its hit data stay the same size at any mouse distance. Longsword uses the blade as its strike zone, spear emphasizes the spearhead, and axe emphasizes the axe head.
 
-Longsword attacks are selected internally from weapon angle, not UI lanes. High weapon angle produces a downward cut, middle angle produces a thrust that uses the tip/front blade as the strike zone, and low angle produces an upward cut.
-
-The camera keeps the old zoom feel by preserving the logical viewport size and moving over a larger world. Mouse input is converted through `CameraSystem.screenToWorld()` before weapon direction is calculated, and combat remains in world coordinates.
-
-The first networking version is not server-authoritative. Both clients simulate from exchanged inputs and send periodic core-state snapshots for drift checks. This cannot fully prevent cheating, but the code keeps state comparison and correction isolated so a later authoritative relay, Firebase rank layer, or rollback system can be added without rewriting core combat.
-
-Manual WebRTC uses no signaling server. It is enough for local testing and some direct peer cases, but NAT traversal may require a later signaling/STUN/TURN layer.
-
-Firebase is required for Online Matchmaking and Friendly Match. Manual P2P offer/answer still works without Firebase. To enable matchmaking/signaling, create a `.env` file using `.env.example` and provide:
-
-```bash
-VITE_FIREBASE_API_KEY=...
-VITE_FIREBASE_AUTH_DOMAIN=...
-VITE_FIREBASE_PROJECT_ID=...
-VITE_FIREBASE_APP_ID=...
-```
-
-Firebase is used only for anonymous login, queue/room metadata, and WebRTC offer/answer/ICE exchange. It is not a combat authority server.
-
-Firebase console requirements:
-
-1. Enable `Authentication > Sign-in method > Anonymous`.
-2. Create a Firestore database for `matchQueue`, `matchRooms`, and `friendlyRooms`.
-3. Keep API keys in `.env`; do not hardcode Firebase config into source files.
-
-If the browser console shows `identitytoolkit.googleapis.com/.../accounts:signUp` with HTTP 400, Anonymous Auth is usually disabled for the Firebase project. Enable it in the Firebase console, then refresh the Vite page.
+The first networking version is not server-authoritative. Both clients simulate from exchanged inputs and send periodic core-state snapshots for drift checks. This cannot fully prevent cheating, but the code keeps state comparison and correction isolated so later server authority or rollback can be added without rewriting core combat.
 
 ## Verification
 
@@ -125,16 +182,16 @@ npm run dev
 npm run build
 ```
 
-For browser verification:
+Browser checks:
 
-1. Confirm the menu shows only `Your Weapon`.
-2. Open Online Matchmaking, Friendly Match, and P2P Duel and confirm each button shows only its own panel.
-3. Connect two browser sessions through Friendly Match or manual P2P.
-4. Confirm both fighters render after connection.
-5. Move left/right and verify the camera follows without zooming out.
-6. Move the mouse and verify the weapon follows in world coordinates.
-7. Attack with the drawn weapon and confirm visible weapon contact drives hit, guard, parry, kick, and clash effects.
+1. Confirm the menu shows only `Ranked Match`, `Casual Match`, and `Friendly Match`.
+2. Press Ranked or Casual and confirm the centered matchmaking overlay appears immediately.
+3. Press Friendly and confirm only the code panel appears.
+4. Connect two browser sessions through ranked/casual matchmaking or friendly room code.
+5. Confirm the connection panel/overlay hides after WebRTC connects.
+6. Finish a ranked duel and confirm the Season Top 10 can update.
+7. Move the mouse and verify visible weapon contact drives hit, guard, parry, kick, and clash effects.
 
 ## Future Structure
 
-The folder layout leaves room for Firebase ranking, maps, additional weapons, armor/equipment, matchmaking, replay, spectator mode, and rollback netcode.
+The folder layout leaves room for Firebase rank seasons, maps, additional weapons, armor/equipment, richer matchmaking, replay, spectator mode, Cloud Functions validation, and rollback netcode.

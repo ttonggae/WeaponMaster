@@ -35,6 +35,7 @@ export class FriendlyRoomService {
         code,
         status: "waiting",
         hostId,
+        matchType: "friendly",
         createdAt: now,
         expiresAt: now + ROOM_TTL_MS,
       };

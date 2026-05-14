@@ -60,3 +60,9 @@ export const HEAVY_HITSTOP_SECONDS = 0.08;
 export const STATE_SYNC_INTERVAL_FRAMES = 12;
 export const MAX_DELTA_SECONDS = 1 / 30;
 export const DEFAULT_REMOTE_WEAPON = "longsword";
+
+export const CURRENT_SEASON_ID = "season-1";
+export const RANK_BASE_SCORE = 1000;
+export const RANK_WIN_SCORE = 25;
+export const RANK_LOSS_SCORE = 15;
+export const LEADERBOARD_LIMIT = 10;

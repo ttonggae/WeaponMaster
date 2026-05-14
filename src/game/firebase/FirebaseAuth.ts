@@ -1,42 +1,51 @@
-import { getAuth, signInAnonymously } from "firebase/auth";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  type User,
+} from "firebase/auth";
+import type { AuthProfile } from "../types";
 import type { FirebaseServices } from "./FirebaseApp";
 
 export class FirebaseAuthService {
   constructor(private readonly services: FirebaseServices) {}
 
-  async signInAnonymous(): Promise<string> {
+  async signInGoogle(): Promise<AuthProfile> {
     const auth = getAuth(this.services.app);
+    if (auth.currentUser) {
+      return this.toProfile(auth.currentUser);
+    }
+
     try {
-      const credential = await signInAnonymously(auth);
-      return credential.user.uid;
+      const provider = new GoogleAuthProvider();
+      const credential = await signInWithPopup(auth, provider);
+      return this.toProfile(credential.user);
     } catch (error) {
       const code = this.errorCode(error);
-      const message = this.errorMessage(error);
-      if (code === "auth/operation-not-allowed" || message.includes("OPERATION_NOT_ALLOWED")) {
-        throw new Error(
-          "Firebase Anonymous Auth is disabled. Enable Authentication > Sign-in method > Anonymous.",
-        );
+      if (code === "auth/popup-closed-by-user") {
+        throw new Error("Google sign-in was closed before completion.");
       }
-      if (code === "auth/admin-restricted-operation" || message.includes("ADMIN_ONLY_OPERATION")) {
-        throw new Error("Firebase anonymous sign-up is restricted for this project.");
+      if (code === "auth/operation-not-allowed") {
+        throw new Error("Google sign-in is disabled. Enable Authentication > Sign-in method > Google.");
       }
-      if (code === "auth/configuration-not-found" || message.includes("CONFIGURATION_NOT_FOUND")) {
-        throw new Error("Firebase Authentication is not initialized for this project.");
+      if (code === "auth/unauthorized-domain") {
+        throw new Error("This domain is not authorized in Firebase Authentication settings.");
       }
-      throw new Error(`Firebase anonymous login failed${code ? `: ${code}` : ""}.`);
+      throw new Error(`Google sign-in failed${code ? `: ${code}` : ""}.`);
     }
+  }
+
+  private toProfile(user: User): AuthProfile {
+    return {
+      uid: user.uid,
+      displayName: user.displayName?.trim() || `Player-${user.uid.slice(0, 6)}`,
+      photoURL: user.photoURL,
+    };
   }
 
   private errorCode(error: unknown): string {
     if (typeof error === "object" && error && "code" in error) {
       return String((error as { code?: unknown }).code ?? "");
-    }
-    return "";
-  }
-
-  private errorMessage(error: unknown): string {
-    if (typeof error === "object" && error && "message" in error) {
-      return String((error as { message?: unknown }).message ?? "");
     }
     return "";
   }
