@@ -92,6 +92,7 @@ export class Game {
 
     this.state.updateVisualTimers(dt);
     this.update(dt);
+    this.audio.playCombatActions([this.state.players.p1, this.state.players.p2]);
     this.audio.playNewEffects(this.state.effects);
     this.renderer.render(this.state, this.localPlayerId, dt);
     requestAnimationFrame(this.loop);

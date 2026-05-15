@@ -47,8 +47,11 @@ Manual checks:
 
 - The menu exposes exactly three modes: Ranked Match, Casual Match, Friendly Match.
 - The menu shows the current season number/name and a procedural forge background.
+- Menu title/season must stay top-left, Top 10 plus personal score top-right, and match controls bottom-center.
+- Loadout opens as a centered large box from a button above the match controls.
+- Loadout shows a character preview, current stats, weapon choices, and locked gear/armor/passive slots.
 - Menu audio uses short forge crackle/hammer events without a continuous drone.
-- In-game impact effects produce matching procedural sound effects.
+- In-game action changes and impact effects produce matching procedural sound effects.
 - Ranked/Casual immediately start matchmaking and show the centered matchmaking overlay.
 - Friendly Match opens only the 6-character room-code panel.
 - Google sign-in starts when entering an online mode.
@@ -135,7 +138,9 @@ Manual checks:
 - Menu shows only Ranked Match, Casual Match, Friendly Match.
 - Menu shows active season number/name.
 - Menu has procedural forge visuals and menu-only forge event audio.
-- In-game hit, guard, parry, clash, kick, and dust effects have procedural sound cues.
+- Menu positions title/season, Top 10, personal score, loadout, and match controls in their requested areas.
+- Loadout supports weapon selection and locked future slots with stats/descriptions/equip button state.
+- In-game action, hit, guard, parry, clash, kick, and dust effects have procedural sound cues.
 - Ranked/Casual matchmaking overlay appears in the center immediately after click.
 - Friendly room code create/join works.
 - Two characters render after connection.

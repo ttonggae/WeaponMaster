@@ -87,15 +87,18 @@ Rank writes are client-side in this MVP, so they are not cheat-proof. The rank s
 - Main menu displays the active season number and concept name.
 - Main menu canvas background is a procedural forge with furnace glow, anvil, tools, and sparks.
 - Main menu sound uses short Web Audio crackles and hammer strikes after the first browser input gesture.
-- Main menu UI is split into identity, controls, and leaderboard sections instead of one dense text panel.
+- Main menu places the title/season at top-left, Season Top 10 plus personal score at top-right, and match controls at bottom-center.
+- Loadout opens from a button above match controls and shows a centered equipment box.
+- Loadout currently supports weapon selection; gear, armor, and passive slots are visible but locked for future updates.
 - Ranked/Casual show a centered matchmaking overlay while searching.
+- Friendly room code UI opens in the center of the screen.
 - Matchmaking UI is hidden once WebRTC connects and the duel begins.
 - Current player score and Season Top 10 leaderboard are shown on the main menu when Firebase is configured.
 - Google sign-in replaces anonymous auth to avoid confusing player identity.
 - Wide arena with a smooth player-focused camera and separated world/screen coordinates.
 - Longsword, spear, and axe weapon data with mouse-driven weapon posture.
 - Health, stamina, charge, attack, guard, parry, feint, kick, stun, hitstop, camera shake, and impact effects.
-- In-game hit, guard, parry, clash, kick, and dust effects trigger matching procedural sound effects.
+- In-game action transitions and hit, guard, parry, clash, kick, and dust effects trigger matching procedural sound effects.
 - `WeaponPoseSystem` calculates fixed-length weapon pose data shared by character posing, weapon rendering, and hit detection.
 - Hit, guard, and parry checks use the same blade/tip/head strike zones that are drawn on screen.
 
@@ -186,7 +189,7 @@ Mouse distance does not change weapon length. The mouse only defines the target 
 
 The first networking version is not server-authoritative. Both clients simulate from exchanged inputs and send periodic core-state snapshots for drift checks. This cannot fully prevent cheating, but the code keeps state comparison and correction isolated so later server authority or rollback can be added without rewriting core combat.
 
-Audio is generated through Web Audio rather than external files. Browsers block autoplay before a user gesture, so menu sound starts after the first click/key press and stops whenever the main menu is hidden. The menu does not use a continuous oscillator drone; it only plays short crackle and hammer events to avoid steady buzzing.
+Audio is generated through Web Audio rather than external files. Browsers block autoplay before a user gesture, so sound starts after the first click/key press. Menu audio stops whenever the main menu is hidden. In-game audio also listens to action state changes, so swings, guard posture, parry, kick, and guard break have cues even before a hit occurs.
 
 ## Verification
 
@@ -200,15 +203,18 @@ Browser checks:
 
 1. Confirm the menu shows only `Ranked Match`, `Casual Match`, and `Friendly Match`.
 2. Confirm the menu shows `Season 1: Test Season` over the forge background.
-3. Confirm the menu UI is split into readable sections and does not look like all text is squeezed into one box.
-4. Click once on the page and confirm forge crackle/hammer sound plays only while the main menu is visible, without a steady buzz.
-5. Press Ranked or Casual and confirm the centered matchmaking overlay appears immediately.
-6. Press Friendly and confirm only the code panel appears.
-7. Connect two browser sessions through ranked/casual matchmaking or friendly room code.
-8. Confirm the connection panel/overlay hides after WebRTC connects.
-9. Confirm Google auth creates a 1000 point score for a new player and shows it in the menu.
-10. Finish a ranked duel and confirm the personal score and Season Top 10 can update.
-11. Move the mouse and verify visible weapon contact drives hit, guard, parry, kick, and clash visual/audio effects.
+3. Confirm title/season are top-left, Top 10 plus personal score are top-right, and match controls are bottom-center.
+4. Open Loadout and confirm weapon, gear, armor, and passive slots surround the character preview.
+5. Select Longsword/Spear/Axe and confirm the character weapon preview and stats update before pressing Equip.
+6. Click locked gear/armor/passive slots and confirm they show descriptions and a disabled Locked button.
+7. Click once on the page and confirm forge crackle/hammer sound plays only while the main menu is visible, without a steady buzz.
+8. Press Ranked or Casual and confirm the centered matchmaking overlay appears immediately.
+9. Press Friendly and confirm the room-code panel appears centered.
+10. Connect two browser sessions through ranked/casual matchmaking or friendly room code.
+11. Confirm the connection panel/overlay hides after WebRTC connects.
+12. Confirm Google auth creates a 1000 point score for a new player and shows it in the menu.
+13. Finish a ranked duel and confirm the personal score and Season Top 10 can update.
+14. Verify attack, guard, parry, guard break, kick, hit, guard, and clash events produce audible in-game cues.
 
 ## Future Structure
 

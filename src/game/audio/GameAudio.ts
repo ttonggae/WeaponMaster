@@ -1,4 +1,10 @@
-import type { ImpactEffect } from "../types";
+import type { ActionState, ImpactEffect, PlayerId, WeaponType } from "../types";
+
+interface CombatAudioState {
+  id: PlayerId;
+  action: ActionState;
+  weaponType: WeaponType;
+}
 
 export class GameAudio {
   private context: AudioContext | null = null;
@@ -9,6 +15,7 @@ export class GameAudio {
   private gameActive = false;
   private unlocked = false;
   private readonly playedEffectIds: number[] = [];
+  private readonly lastActions = new Map<PlayerId, ActionState>();
 
   constructor() {
     window.addEventListener("pointerdown", () => void this.unlock(), { once: true });
@@ -32,6 +39,7 @@ export class GameAudio {
     this.gameActive = active;
     if (!active) {
       this.playedEffectIds.length = 0;
+      this.lastActions.clear();
     }
   }
 
@@ -50,6 +58,21 @@ export class GameAudio {
 
     if (this.playedEffectIds.length > 96) {
       this.playedEffectIds.splice(0, this.playedEffectIds.length - 96);
+    }
+  }
+
+  playCombatActions(players: CombatAudioState[]): void {
+    if (!this.unlocked || !this.gameActive) {
+      return;
+    }
+
+    for (const player of players) {
+      const previous = this.lastActions.get(player.id);
+      if (previous === player.action) {
+        continue;
+      }
+      this.lastActions.set(player.id, player.action);
+      this.playActionCue(player.action, player.weaponType);
     }
   }
 
@@ -130,6 +153,33 @@ export class GameAudio {
     } else if (effect.type === "dust") {
       this.playNoiseBurst(0.05, 0.012, 420, 0.5);
     }
+  }
+
+  private playActionCue(action: ActionState, weaponType: WeaponType): void {
+    if (action === "charge") {
+      this.playNoiseBurst(0.08, 0.028, 540, 0.7);
+    } else if (action === "attack") {
+      this.playWeaponSwing(weaponType);
+    } else if (action === "guard") {
+      this.playMetalClang(0.45, 0.45);
+    } else if (action === "parry") {
+      this.playTone(1420, 0.06, 0.05, "triangle");
+      this.playNoiseBurst(0.05, 0.022, 1900, 1.2);
+    } else if (action === "kick") {
+      this.playNoiseBurst(0.08, 0.036, 340, 0.7);
+    } else if (action === "guardBreak") {
+      this.playWeaponSwing(weaponType, 1.25);
+      this.playTone(125, 0.12, 0.045, "sine");
+    } else if (action === "feint") {
+      this.playNoiseBurst(0.045, 0.018, 900, 1.5);
+    }
+  }
+
+  private playWeaponSwing(weaponType: WeaponType, force = 1): void {
+    const weight = weaponType === "axe" ? 1.32 : weaponType === "spear" ? 0.86 : 1;
+    const frequency = weaponType === "spear" ? 820 : weaponType === "axe" ? 310 : 560;
+    this.playNoiseBurst(0.12 * weight, 0.034 * force * weight, frequency, 0.55);
+    this.playTone(weaponType === "axe" ? 72 : 110, 0.08 * weight, 0.026 * force, "sine");
   }
 
   private playMetalClang(force: number, brightness: number): void {
@@ -213,7 +263,7 @@ export class GameAudio {
     const context = this.getContext();
     if (!this.master) {
       this.master = context.createGain();
-      this.master.gain.setValueAtTime(0.42, context.currentTime);
+      this.master.gain.setValueAtTime(0.68, context.currentTime);
       this.master.connect(context.destination);
     }
     return this.master;
