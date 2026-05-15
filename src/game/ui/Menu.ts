@@ -243,18 +243,19 @@ export class Menu {
     selectionPanel.className = "loadout-selection";
     this.selectionTitle.textContent = "Weapon";
     this.itemList.className = "inventory-list";
+    selectionPanel.append(this.selectionTitle, this.itemList);
+
+    const details = document.createElement("section");
+    details.className = "loadout-details";
     this.detailTitle.textContent = "";
     this.detailDescription.textContent = "";
     this.detailStats.className = "stat-grid detail";
     this.equipButton.type = "button";
     this.equipButton.className = "button primary";
     this.equipButton.addEventListener("click", () => this.equipSelectedItem());
-    const details = document.createElement("div");
-    details.className = "loadout-details";
     details.append(this.detailTitle, this.detailDescription, this.detailStats, this.equipButton);
-    selectionPanel.append(this.selectionTitle, this.itemList, details);
 
-    body.append(characterPanel, categoryPanel, selectionPanel);
+    body.append(characterPanel, categoryPanel, selectionPanel, details);
     modal.append(header, body);
     this.loadoutOverlay.append(modal);
     return this.loadoutOverlay;

@@ -49,7 +49,7 @@ Manual checks:
 - The menu shows the current season number/name and a procedural forge background.
 - Menu title/season must stay top-left, Top 10 plus personal score top-right, and match controls bottom-center.
 - Loadout opens as a centered large box from a button above the match controls.
-- Loadout columns must read left-to-right as character/stats, equipment category, and selected category item choices/details.
+- Loadout columns must read left-to-right as character/stats, equipment category, selected category item choices, and selected item details/equip action.
 - UI text must wrap or truncate inside panels/buttons instead of spilling outside boxes.
 - Menu audio uses short forge crackle/hammer events without a continuous drone.
 - In-game action changes and impact effects produce matching procedural sound effects.

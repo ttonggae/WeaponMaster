@@ -113,7 +113,7 @@ textarea {
   position: absolute;
   top: 0;
   left: 0;
-  width: min(470px, calc(100vw - 48px));
+  width: min(660px, calc(100vw - 48px));
   padding: 22px;
 }
 
@@ -137,9 +137,10 @@ textarea {
 .menu-title {
   margin: 0 0 6px;
   color: #efe6d1;
-  font-size: clamp(36px, 7vw, 76px);
+  font-size: clamp(42px, 5.2vw, 72px);
   line-height: 0.95;
   letter-spacing: 0;
+  white-space: nowrap;
 }
 
 .menu-subtitle {
@@ -278,7 +279,7 @@ textarea {
 }
 
 .loadout-modal {
-  width: min(1080px, calc(100vw - 36px));
+  width: min(1320px, calc(100vw - 36px));
   max-height: calc(100vh - 36px);
   overflow: auto;
   padding: 18px;
@@ -311,13 +312,18 @@ textarea {
 
 .loadout-body {
   display: grid;
-  grid-template-columns: minmax(280px, 0.92fr) minmax(190px, 240px) minmax(300px, 1fr);
+  grid-template-columns:
+    minmax(260px, 0.9fr)
+    minmax(190px, 230px)
+    minmax(220px, 260px)
+    minmax(280px, 1fr);
   gap: 14px;
 }
 
 .loadout-character-panel,
 .loadout-categories,
-.loadout-selection {
+.loadout-selection,
+.loadout-details {
   border: 1px solid rgba(190, 170, 130, 0.18);
   border-radius: 8px;
   background: rgba(11, 10, 9, 0.58);
@@ -529,9 +535,10 @@ textarea {
   display: grid;
   gap: 12px;
   align-content: start;
-  margin-top: 14px;
-  border-top: 1px solid rgba(190, 170, 130, 0.16);
-  padding-top: 14px;
+}
+
+.loadout-details .button {
+  margin-top: 4px;
 }
 
 .button {
@@ -655,7 +662,7 @@ textarea {
   font-size: 13px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 1120px) {
   .menu-shell {
     overflow: auto;
     padding: 16px;
@@ -675,8 +682,25 @@ textarea {
     transform: none;
   }
 
+  .match-menu-panel {
+    justify-self: center;
+    max-width: 520px;
+  }
+
+  .loadout-body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
   .menu-actions,
   .loadout-body {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .menu-title {
+    font-size: clamp(34px, 11vw, 42px);
   }
 }

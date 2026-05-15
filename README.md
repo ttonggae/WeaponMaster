@@ -88,7 +88,7 @@ Rank writes are client-side in this MVP, so they are not cheat-proof. The rank s
 - Main menu canvas background is a procedural forge with furnace glow, anvil, tools, and sparks.
 - Main menu sound uses short Web Audio crackles and hammer strikes after the first browser input gesture.
 - Main menu places the title/season at top-left, Season Top 10 plus personal score at top-right, and match controls at bottom-center.
-- Loadout opens from a button above match controls and shows a centered equipment box with three columns: character/stats, equipment category, and item selection/details.
+- Loadout opens from a button above match controls and shows a centered equipment box with four columns: character/stats, equipment category, item selection, and selected item details/equip action.
 - Loadout currently supports weapon selection; usable gear, armor, and passive categories are visible but locked for future updates.
 - UI text uses wrapping, truncation, and minimum-width guards so labels do not spill outside their boxes.
 - Ranked/Casual show a centered matchmaking overlay while searching.
@@ -205,7 +205,7 @@ Browser checks:
 1. Confirm the menu shows only `Ranked Match`, `Casual Match`, and `Friendly Match`.
 2. Confirm the menu shows `Season 1: Test Season` over the forge background.
 3. Confirm title/season are top-left, Top 10 plus personal score are top-right, and match controls are bottom-center.
-4. Open Loadout and confirm the columns read left-to-right as character/stats, equipment category, and selected category item choices.
+4. Open Loadout and confirm the columns read left-to-right as character/stats, equipment category, selected category item choices, and selected item details/equip action.
 5. Select Weapon, then Longsword/Spear/Axe, and confirm the character weapon preview and stats update before pressing Equip.
 6. Click locked usable gear/armor/passive categories and confirm they show descriptions and a disabled Locked button.
 7. Resize the browser and confirm UI text stays inside its panels/buttons.
