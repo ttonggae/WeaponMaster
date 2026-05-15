@@ -49,7 +49,8 @@ Manual checks:
 - The menu shows the current season number/name and a procedural forge background.
 - Menu title/season must stay top-left, Top 10 plus personal score top-right, and match controls bottom-center.
 - Loadout opens as a centered large box from a button above the match controls.
-- Loadout shows a character preview, current stats, weapon choices, and locked gear/armor/passive slots.
+- Loadout columns must read left-to-right as character/stats, equipment category, and selected category item choices/details.
+- UI text must wrap or truncate inside panels/buttons instead of spilling outside boxes.
 - Menu audio uses short forge crackle/hammer events without a continuous drone.
 - In-game action changes and impact effects produce matching procedural sound effects.
 - Ranked/Casual immediately start matchmaking and show the centered matchmaking overlay.
@@ -139,7 +140,8 @@ Manual checks:
 - Menu shows active season number/name.
 - Menu has procedural forge visuals and menu-only forge event audio.
 - Menu positions title/season, Top 10, personal score, loadout, and match controls in their requested areas.
-- Loadout supports weapon selection and locked future slots with stats/descriptions/equip button state.
+- Loadout supports weapon category item selection and locked future categories with stats/descriptions/equip button state.
+- UI text stays inside its panels/buttons across desktop and mobile widths.
 - In-game action, hit, guard, parry, clash, kick, and dust effects have procedural sound cues.
 - Ranked/Casual matchmaking overlay appears in the center immediately after click.
 - Friendly room code create/join works.

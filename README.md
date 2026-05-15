@@ -88,8 +88,9 @@ Rank writes are client-side in this MVP, so they are not cheat-proof. The rank s
 - Main menu canvas background is a procedural forge with furnace glow, anvil, tools, and sparks.
 - Main menu sound uses short Web Audio crackles and hammer strikes after the first browser input gesture.
 - Main menu places the title/season at top-left, Season Top 10 plus personal score at top-right, and match controls at bottom-center.
-- Loadout opens from a button above match controls and shows a centered equipment box.
-- Loadout currently supports weapon selection; gear, armor, and passive slots are visible but locked for future updates.
+- Loadout opens from a button above match controls and shows a centered equipment box with three columns: character/stats, equipment category, and item selection/details.
+- Loadout currently supports weapon selection; usable gear, armor, and passive categories are visible but locked for future updates.
+- UI text uses wrapping, truncation, and minimum-width guards so labels do not spill outside their boxes.
 - Ranked/Casual show a centered matchmaking overlay while searching.
 - Friendly room code UI opens in the center of the screen.
 - Matchmaking UI is hidden once WebRTC connects and the duel begins.
@@ -204,17 +205,18 @@ Browser checks:
 1. Confirm the menu shows only `Ranked Match`, `Casual Match`, and `Friendly Match`.
 2. Confirm the menu shows `Season 1: Test Season` over the forge background.
 3. Confirm title/season are top-left, Top 10 plus personal score are top-right, and match controls are bottom-center.
-4. Open Loadout and confirm weapon, gear, armor, and passive slots surround the character preview.
-5. Select Longsword/Spear/Axe and confirm the character weapon preview and stats update before pressing Equip.
-6. Click locked gear/armor/passive slots and confirm they show descriptions and a disabled Locked button.
-7. Click once on the page and confirm forge crackle/hammer sound plays only while the main menu is visible, without a steady buzz.
-8. Press Ranked or Casual and confirm the centered matchmaking overlay appears immediately.
-9. Press Friendly and confirm the room-code panel appears centered.
-10. Connect two browser sessions through ranked/casual matchmaking or friendly room code.
-11. Confirm the connection panel/overlay hides after WebRTC connects.
-12. Confirm Google auth creates a 1000 point score for a new player and shows it in the menu.
-13. Finish a ranked duel and confirm the personal score and Season Top 10 can update.
-14. Verify attack, guard, parry, guard break, kick, hit, guard, and clash events produce audible in-game cues.
+4. Open Loadout and confirm the columns read left-to-right as character/stats, equipment category, and selected category item choices.
+5. Select Weapon, then Longsword/Spear/Axe, and confirm the character weapon preview and stats update before pressing Equip.
+6. Click locked usable gear/armor/passive categories and confirm they show descriptions and a disabled Locked button.
+7. Resize the browser and confirm UI text stays inside its panels/buttons.
+8. Click once on the page and confirm forge crackle/hammer sound plays only while the main menu is visible, without a steady buzz.
+9. Press Ranked or Casual and confirm the centered matchmaking overlay appears immediately.
+10. Press Friendly and confirm the room-code panel appears centered.
+11. Connect two browser sessions through ranked/casual matchmaking or friendly room code.
+12. Confirm the connection panel/overlay hides after WebRTC connects.
+13. Confirm Google auth creates a 1000 point score for a new player and shows it in the menu.
+14. Finish a ranked duel and confirm the personal score and Season Top 10 can update.
+15. Verify attack, guard, parry, guard break, kick, hit, guard, and clash events produce audible in-game cues.
 
 ## Future Structure
 

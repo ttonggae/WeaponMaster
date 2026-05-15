@@ -30,7 +30,7 @@ const LOCKED_ITEMS: LoadoutItem[] = [
   {
     id: "gear-locked",
     kind: "gear",
-    label: "Gear Slot",
+    label: "Usable Gear",
     locked: true,
     description: "Equipment and consumable utility slots are reserved for a future update.",
   },
@@ -53,6 +53,7 @@ const LOCKED_ITEMS: LoadoutItem[] = [
 export class Menu {
   readonly root: HTMLDivElement;
   private selectedWeapon: WeaponType = "longsword";
+  private selectedCategory: LoadoutItemKind = "weapon";
   private selectedItem: LoadoutItem = this.weaponToItem("longsword");
   private readonly accountLine = document.createElement("div");
   private readonly scoreLine = document.createElement("div");
@@ -65,8 +66,11 @@ export class Menu {
   private readonly detailDescription = document.createElement("p");
   private readonly detailStats = document.createElement("dl");
   private readonly equipButton = document.createElement("button");
+  private readonly categoryList = document.createElement("div");
+  private readonly itemList = document.createElement("div");
+  private readonly selectionTitle = document.createElement("h3");
   private readonly weaponButtons = new Map<WeaponType, HTMLButtonElement>();
-  private readonly slotButtons = new Map<string, HTMLButtonElement>();
+  private readonly categoryButtons = new Map<LoadoutItemKind, HTMLButtonElement>();
 
   constructor(parent: HTMLElement, callbacks: MenuCallbacks) {
     this.root = document.createElement("div");
@@ -205,12 +209,8 @@ export class Menu {
     const body = document.createElement("div");
     body.className = "loadout-body";
 
-    const stage = document.createElement("section");
-    stage.className = "loadout-stage";
-    const topSlot = this.makeSlotButton(LOCKED_ITEMS[2], "top");
-    const leftSlot = this.makeSlotButton(this.weaponToItem(this.selectedWeapon), "left");
-    const rightSlot = this.makeSlotButton(LOCKED_ITEMS[1], "right");
-    const bottomSlot = this.makeSlotButton(LOCKED_ITEMS[0], "bottom");
+    const characterPanel = document.createElement("section");
+    characterPanel.className = "loadout-character-panel";
 
     this.characterPreview.className = "loadout-character";
     this.characterPreview.append(
@@ -229,56 +229,63 @@ export class Menu {
     statTitle.textContent = "Current Stats";
     this.statGrid.className = "stat-grid";
     statPanel.append(statTitle, this.statGrid);
+    characterPanel.append(this.characterPreview, statPanel);
 
-    stage.append(topSlot, leftSlot, this.characterPreview, rightSlot, bottomSlot, statPanel);
+    const categoryPanel = document.createElement("section");
+    categoryPanel.className = "loadout-categories";
+    const categoryTitle = document.createElement("h3");
+    categoryTitle.textContent = "Equipment Type";
+    this.categoryList.className = "category-list";
+    categoryPanel.append(categoryTitle, this.categoryList);
+    this.buildCategoryButtons();
 
-    const inventory = document.createElement("section");
-    inventory.className = "loadout-inventory";
-    const inventoryTitle = document.createElement("h3");
-    inventoryTitle.textContent = "Equipment";
-    const weaponList = document.createElement("div");
-    weaponList.className = "inventory-list";
-    for (const weaponType of WEAPON_TYPES) {
-      const item = this.weaponToItem(weaponType);
-      const button = this.makeInventoryButton(item);
-      this.weaponButtons.set(weaponType, button);
-      weaponList.append(button);
-    }
-    for (const item of LOCKED_ITEMS) {
-      weaponList.append(this.makeInventoryButton(item));
-    }
-    inventory.append(inventoryTitle, weaponList);
-
-    const details = document.createElement("section");
-    details.className = "loadout-details";
+    const selectionPanel = document.createElement("section");
+    selectionPanel.className = "loadout-selection";
+    this.selectionTitle.textContent = "Weapon";
+    this.itemList.className = "inventory-list";
     this.detailTitle.textContent = "";
     this.detailDescription.textContent = "";
     this.detailStats.className = "stat-grid detail";
     this.equipButton.type = "button";
     this.equipButton.className = "button primary";
     this.equipButton.addEventListener("click", () => this.equipSelectedItem());
+    const details = document.createElement("div");
+    details.className = "loadout-details";
     details.append(this.detailTitle, this.detailDescription, this.detailStats, this.equipButton);
+    selectionPanel.append(this.selectionTitle, this.itemList, details);
 
-    body.append(stage, inventory, details);
+    body.append(characterPanel, categoryPanel, selectionPanel);
     modal.append(header, body);
     this.loadoutOverlay.append(modal);
     return this.loadoutOverlay;
   }
 
-  private makeSlotButton(item: LoadoutItem, position: string): HTMLButtonElement {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `equipment-slot ${position}${item.locked ? " locked" : ""}`;
-    button.textContent = item.label;
-    button.addEventListener("click", () => this.selectItem(item));
-    this.slotButtons.set(item.kind, button);
-    return button;
+  private buildCategoryButtons(): void {
+    const categories: Array<[LoadoutItemKind, string]> = [
+      ["weapon", "Weapon"],
+      ["gear", "Usable Gear"],
+      ["armor", "Armor"],
+      ["passive", "Passive"],
+    ];
+
+    this.categoryList.replaceChildren(
+      ...categories.map(([kind, label]) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "category-button";
+        button.textContent = label;
+        button.addEventListener("click", () => this.selectCategory(kind));
+        this.categoryButtons.set(kind, button);
+        return button;
+      }),
+    );
   }
 
   private makeInventoryButton(item: LoadoutItem): HTMLButtonElement {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `inventory-item ${item.locked ? "locked" : ""}`;
+    button.classList.toggle("selected", item.id === this.selectedItem.id);
     const type = document.createElement("span");
     const name = document.createElement("strong");
     type.textContent = item.kind;
@@ -286,6 +293,12 @@ export class Menu {
     button.append(type, name);
     button.addEventListener("click", () => this.selectItem(item));
     return button;
+  }
+
+  private selectCategory(category: LoadoutItemKind): void {
+    this.selectedCategory = category;
+    this.selectedItem = category === "weapon" ? this.weaponToItem(this.selectedWeapon) : this.lockedItemFor(category);
+    this.refreshLoadout();
   }
 
   private selectItem(item: LoadoutItem): void {
@@ -307,6 +320,8 @@ export class Menu {
     const weapon = getWeaponData(this.selectedWeapon);
     this.characterPreview.dataset.weapon = this.selectedWeapon;
     this.statGrid.replaceChildren(...this.makeStatRows(this.baseStats(weapon)));
+    this.refreshCategoryState();
+    this.refreshItemList();
     this.detailTitle.textContent = this.selectedItem.label;
     this.detailDescription.textContent = this.selectedItem.description;
     this.detailStats.replaceChildren(...this.makeStatRows(this.itemStats(this.selectedItem)));
@@ -327,12 +342,37 @@ export class Menu {
       const active = weaponType === this.selectedWeapon;
       button.classList.toggle("active", active);
     }
+  }
 
-    const weaponSlot = this.slotButtons.get("weapon");
-    if (weaponSlot) {
-      weaponSlot.textContent = `Weapon: ${weapon.label}`;
-      weaponSlot.classList.remove("locked");
+  private refreshCategoryState(): void {
+    const labels: Record<LoadoutItemKind, string> = {
+      weapon: `Weapon: ${getWeaponData(this.selectedWeapon).label}`,
+      gear: "Usable Gear: Locked",
+      armor: "Armor: Locked",
+      passive: "Passive: Locked",
+    };
+    this.categoryButtons.forEach((button, category) => {
+      button.textContent = labels[category];
+      button.classList.toggle("active", category === this.selectedCategory);
+      button.classList.toggle("locked", category !== "weapon");
+    });
+  }
+
+  private refreshItemList(): void {
+    this.weaponButtons.clear();
+    this.selectionTitle.textContent = this.categoryTitle(this.selectedCategory);
+    if (this.selectedCategory === "weapon") {
+      const buttons = WEAPON_TYPES.map((weaponType) => {
+        const item = this.weaponToItem(weaponType);
+        const button = this.makeInventoryButton(item);
+        this.weaponButtons.set(weaponType, button);
+        return button;
+      });
+      this.itemList.replaceChildren(...buttons);
+      return;
     }
+
+    this.itemList.replaceChildren(this.makeInventoryButton(this.lockedItemFor(this.selectedCategory)));
   }
 
   private makeStatRows(stats: Array<[string, string]>): HTMLElement[] {
@@ -392,6 +432,26 @@ export class Menu {
       weaponType,
       description: this.weaponDescription(weaponType),
     };
+  }
+
+  private lockedItemFor(category: LoadoutItemKind): LoadoutItem {
+    if (category === "weapon") {
+      return this.weaponToItem(this.selectedWeapon);
+    }
+    return LOCKED_ITEMS.find((item) => item.kind === category) ?? LOCKED_ITEMS[0];
+  }
+
+  private categoryTitle(category: LoadoutItemKind): string {
+    if (category === "weapon") {
+      return "Weapon Selection";
+    }
+    if (category === "gear") {
+      return "Usable Gear";
+    }
+    if (category === "armor") {
+      return "Armor";
+    }
+    return "Passive";
   }
 
   private weaponDescription(weaponType: WeaponType): string {
