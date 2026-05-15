@@ -1,3 +1,4 @@
+import { CURRENT_SEASON_NAME, CURRENT_SEASON_NUMBER } from "../constants";
 import type { LeaderboardEntry, WeaponType } from "../types";
 import { WeaponSelect } from "./WeaponSelect";
 
@@ -24,6 +25,10 @@ export class Menu {
     const title = document.createElement("h1");
     title.className = "menu-title";
     title.textContent = "WeaponMaster";
+
+    const season = document.createElement("div");
+    season.className = "season-badge";
+    season.textContent = `Season ${CURRENT_SEASON_NUMBER}: ${CURRENT_SEASON_NAME}`;
 
     const subtitle = document.createElement("p");
     subtitle.className = "menu-subtitle";
@@ -66,7 +71,7 @@ export class Menu {
     leaderboard.append(leaderboardTitle, this.leaderboardList);
 
     actions.append(rankedButton, casualButton, friendlyButton);
-    panel.append(title, subtitle, this.accountLine, this.scoreLine, grid, actions, leaderboard);
+    panel.append(title, season, subtitle, this.accountLine, this.scoreLine, grid, actions, leaderboard);
     this.root.append(panel);
     parent.append(this.root);
   }

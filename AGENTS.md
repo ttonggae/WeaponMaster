@@ -9,6 +9,7 @@
 - `src/game/constants.ts`: Named gameplay, rank, and render constants. Avoid unexplained magic numbers elsewhere.
 - `src/game/types.ts`: Shared gameplay, geometry, input, weapon, effect, auth, ranking, and network-facing types.
 - `src/game/state/`: Duel and player state containers.
+- `src/game/audio/`: Procedural Web Audio ambience and effects.
 - `src/game/combat/`: Combat orchestration plus stamina, guard, parry, and hitbox systems.
 - `src/game/arena/`: Arena data and movement bounds.
 - `src/game/camera/`: World/screen camera transform and follow logic.
@@ -45,6 +46,8 @@ npm run build
 Manual checks:
 
 - The menu exposes exactly three modes: Ranked Match, Casual Match, Friendly Match.
+- The menu shows the current season number/name and a procedural forge background.
+- Forge ambience starts after the first click/key press and stops when the main menu is hidden.
 - Ranked/Casual immediately start matchmaking and show the centered matchmaking overlay.
 - Friendly Match opens only the 6-character room-code panel.
 - Google sign-in starts when entering an online mode.
@@ -68,6 +71,7 @@ Manual checks:
 - Put tunable numbers in `constants.ts` or `weaponData.ts`.
 - Use short comments only for non-obvious decisions.
 - Do not add external art assets for the MVP.
+- Do not add external audio assets for menu ambience unless explicitly requested.
 - Keep characters as head, torso, left/right arm, and left/right leg only. No elbow or knee joint model.
 
 ## Combat Hit Rules
@@ -102,6 +106,7 @@ Manual checks:
 ## Ranking Rules
 
 - `CURRENT_SEASON_ID` in `constants.ts` selects the active season.
+- `CURRENT_SEASON_NUMBER` and `CURRENT_SEASON_NAME` define the menu-facing season label.
 - Ranked wins add score and ranked losses subtract score.
 - Personal score is stored under `rankScores/{seasonId}/players/{uid}`.
 - Public leaderboard records are stored under `rankings/{seasonId}/players/{uid}`.
@@ -126,6 +131,8 @@ Manual checks:
 - `npm run dev` starts Vite.
 - `npm run build` succeeds.
 - Menu shows only Ranked Match, Casual Match, Friendly Match.
+- Menu shows active season number/name.
+- Menu has procedural forge visuals and menu-only forge ambience.
 - Ranked/Casual matchmaking overlay appears in the center immediately after click.
 - Friendly room code create/join works.
 - Two characters render after connection.

@@ -54,7 +54,7 @@ export class Renderer {
       ctx.restore();
       UIRenderer.draw(ctx, state);
     } else {
-      this.drawTitleBackdrop(ctx);
+      this.drawForgeBackdrop(ctx, state.time);
     }
 
     ctx.restore();
@@ -150,11 +150,152 @@ export class Renderer {
     ctx.stroke();
   }
 
-  private drawTitleBackdrop(ctx: CanvasRenderingContext2D): void {
-    ctx.fillStyle = "rgba(55, 43, 27, 0.15)";
-    ctx.fillRect(160, GROUND_Y - 20, LOGICAL_WIDTH - 320, 4);
-    ctx.fillStyle = "rgba(142, 116, 72, 0.12)";
-    ctx.fillRect(LOGICAL_WIDTH / 2 - 90, GROUND_Y - 142, 180, 116);
+  private drawForgeBackdrop(ctx: CanvasRenderingContext2D, time: number): void {
+    this.drawForgeWall(ctx);
+    this.drawForgeFurnace(ctx, time);
+    this.drawAnvilAndTools(ctx, time);
+    this.drawForgeSparks(ctx, time);
+    this.drawForgeVignette(ctx);
+  }
+
+  private drawForgeWall(ctx: CanvasRenderingContext2D): void {
+    const wall = ctx.createLinearGradient(0, 0, 0, LOGICAL_HEIGHT);
+    wall.addColorStop(0, "#12110f");
+    wall.addColorStop(0.48, "#1a1713");
+    wall.addColorStop(1, "#0a0908");
+    ctx.fillStyle = wall;
+    ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+
+    ctx.strokeStyle = "rgba(84, 76, 62, 0.18)";
+    ctx.lineWidth = 2;
+    for (let y = 72; y < GROUND_Y - 12; y += 44) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(LOGICAL_WIDTH, y + Math.sin(y * 0.08) * 3);
+      ctx.stroke();
+    }
+    for (let x = 34; x < LOGICAL_WIDTH; x += 92) {
+      ctx.beginPath();
+      ctx.moveTo(x, 74);
+      ctx.lineTo(x + Math.sin(x) * 8, GROUND_Y - 20);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = "#17110c";
+    ctx.fillRect(0, GROUND_Y - 12, LOGICAL_WIDTH, LOGICAL_HEIGHT - GROUND_Y + 12);
+    ctx.strokeStyle = "rgba(118, 96, 62, 0.25)";
+    for (let x = 0; x < LOGICAL_WIDTH; x += 64) {
+      ctx.beginPath();
+      ctx.moveTo(x, GROUND_Y - 2);
+      ctx.lineTo(x - 28, LOGICAL_HEIGHT);
+      ctx.stroke();
+    }
+  }
+
+  private drawForgeFurnace(ctx: CanvasRenderingContext2D, time: number): void {
+    const pulse = 0.78 + Math.sin(time * 5.2) * 0.1 + Math.sin(time * 12.7) * 0.04;
+    const glow = ctx.createRadialGradient(722, 302, 18, 722, 302, 260);
+    glow.addColorStop(0, `rgba(255, 205, 92, ${0.72 * pulse})`);
+    glow.addColorStop(0.24, `rgba(196, 72, 30, ${0.45 * pulse})`);
+    glow.addColorStop(0.72, "rgba(82, 35, 20, 0.18)");
+    glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(430, 70, 520, 380);
+
+    ctx.fillStyle = "#211b15";
+    ctx.fillRect(596, 238, 252, 128);
+    ctx.strokeStyle = "#5d4932";
+    ctx.lineWidth = 5;
+    ctx.strokeRect(596, 238, 252, 128);
+
+    ctx.fillStyle = "#100d0a";
+    ctx.beginPath();
+    ctx.roundRect(626, 260, 190, 82, 8);
+    ctx.fill();
+
+    const inner = ctx.createRadialGradient(722, 310, 8, 722, 310, 100);
+    inner.addColorStop(0, "#ffe083");
+    inner.addColorStop(0.36, "#d46b2b");
+    inner.addColorStop(1, "#341710");
+    ctx.fillStyle = inner;
+    ctx.beginPath();
+    ctx.roundRect(638, 270, 168, 62, 6);
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(22, 17, 12, 0.78)";
+    ctx.fillRect(568, 366, 310, 22);
+    ctx.fillStyle = "#2a2118";
+    ctx.fillRect(612, 214, 222, 24);
+  }
+
+  private drawAnvilAndTools(ctx: CanvasRenderingContext2D, time: number): void {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.36)";
+    ctx.beginPath();
+    ctx.ellipse(294, GROUND_Y + 7, 118, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#242422";
+    ctx.fillRect(238, GROUND_Y - 64, 112, 30);
+    ctx.fillRect(270, GROUND_Y - 34, 48, 46);
+    ctx.fillRect(222, GROUND_Y + 8, 144, 14);
+    ctx.fillStyle = "#35352f";
+    ctx.beginPath();
+    ctx.moveTo(212, GROUND_Y - 64);
+    ctx.lineTo(250, GROUND_Y - 82);
+    ctx.lineTo(354, GROUND_Y - 82);
+    ctx.lineTo(382, GROUND_Y - 62);
+    ctx.lineTo(350, GROUND_Y - 50);
+    ctx.lineTo(238, GROUND_Y - 50);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "rgba(196, 176, 133, 0.18)";
+    ctx.stroke();
+
+    const hammerLift = Math.max(0, Math.sin(time * 4.1));
+    ctx.save();
+    ctx.translate(252, GROUND_Y - 116 - hammerLift * 18);
+    ctx.rotate(-0.58 - hammerLift * 0.22);
+    ctx.fillStyle = "#5c4933";
+    ctx.fillRect(-4, 0, 8, 92);
+    ctx.fillStyle = "#2b2a27";
+    ctx.fillRect(-28, -12, 56, 20);
+    ctx.restore();
+
+    ctx.strokeStyle = "rgba(117, 101, 75, 0.56)";
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    for (let i = 0; i < 4; i += 1) {
+      const x = 78 + i * 34;
+      ctx.beginPath();
+      ctx.moveTo(x, 160);
+      ctx.lineTo(x + 18, 356);
+      ctx.stroke();
+    }
+  }
+
+  private drawForgeSparks(ctx: CanvasRenderingContext2D, time: number): void {
+    for (let i = 0; i < 42; i += 1) {
+      const seed = i * 37.19;
+      const cycle = (time * (0.18 + (i % 5) * 0.035) + i * 0.071) % 1;
+      const drift = Math.sin(seed) * 60;
+      const x = 690 + drift + Math.sin(time * 3.3 + seed) * 18;
+      const y = 340 - cycle * (210 + (i % 7) * 18);
+      const alpha = Math.sin(cycle * Math.PI) * (0.3 + (i % 4) * 0.08);
+      const radius = 1 + (i % 3) * 0.7;
+      ctx.fillStyle = `rgba(255, ${150 + (i % 4) * 22}, 58, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  private drawForgeVignette(ctx: CanvasRenderingContext2D): void {
+    const shade = ctx.createRadialGradient(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2, 120, LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2, 560);
+    shade.addColorStop(0, "rgba(0, 0, 0, 0)");
+    shade.addColorStop(0.72, "rgba(0, 0, 0, 0.18)");
+    shade.addColorStop(1, "rgba(0, 0, 0, 0.68)");
+    ctx.fillStyle = shade;
+    ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
   }
 
   private drawDuel(ctx: CanvasRenderingContext2D, state: DuelState): void {

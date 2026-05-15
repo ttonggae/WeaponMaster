@@ -68,6 +68,7 @@ There is no local duel or manual copy/paste P2P entry point in the current UI. F
 ## Ranking
 
 - Current season id: `CURRENT_SEASON_ID` in `src/game/constants.ts`.
+- Current season display: `Season 1: Test Season`.
 - Base score: `1000`.
 - Win: `+25`.
 - Loss: `-15`.
@@ -83,6 +84,9 @@ Rank writes are client-side in this MVP, so they are not cheat-proof. The rank s
 ## Current MVP
 
 - Main menu has exactly three modes: Ranked Match, Casual Match, Friendly Match.
+- Main menu displays the active season number and concept name.
+- Main menu canvas background is a procedural forge with furnace glow, anvil, tools, and sparks.
+- Main menu sound uses Web Audio for furnace crackle and hammer strikes after the first browser input gesture.
 - Ranked/Casual show a centered matchmaking overlay while searching.
 - Matchmaking UI is hidden once WebRTC connects and the duel begins.
 - Current player score and Season Top 10 leaderboard are shown on the main menu when Firebase is configured.
@@ -180,6 +184,8 @@ Mouse distance does not change weapon length. The mouse only defines the target 
 
 The first networking version is not server-authoritative. Both clients simulate from exchanged inputs and send periodic core-state snapshots for drift checks. This cannot fully prevent cheating, but the code keeps state comparison and correction isolated so later server authority or rollback can be added without rewriting core combat.
 
+Menu audio is generated through Web Audio rather than external files. Browsers block autoplay before a user gesture, so forge ambience starts after the first click/key press and stops whenever the main menu is hidden.
+
 ## Verification
 
 ```bash
@@ -191,13 +197,15 @@ npm run build
 Browser checks:
 
 1. Confirm the menu shows only `Ranked Match`, `Casual Match`, and `Friendly Match`.
-2. Press Ranked or Casual and confirm the centered matchmaking overlay appears immediately.
-3. Press Friendly and confirm only the code panel appears.
-4. Connect two browser sessions through ranked/casual matchmaking or friendly room code.
-5. Confirm the connection panel/overlay hides after WebRTC connects.
-6. Confirm Google auth creates a 1000 point score for a new player and shows it in the menu.
-7. Finish a ranked duel and confirm the personal score and Season Top 10 can update.
-8. Move the mouse and verify visible weapon contact drives hit, guard, parry, kick, and clash effects.
+2. Confirm the menu shows `Season 1: Test Season` over the forge background.
+3. Click once on the page and confirm forge crackle/hammer sound plays only while the main menu is visible.
+4. Press Ranked or Casual and confirm the centered matchmaking overlay appears immediately.
+5. Press Friendly and confirm only the code panel appears.
+6. Connect two browser sessions through ranked/casual matchmaking or friendly room code.
+7. Confirm the connection panel/overlay hides after WebRTC connects.
+8. Confirm Google auth creates a 1000 point score for a new player and shows it in the menu.
+9. Finish a ranked duel and confirm the personal score and Season Top 10 can update.
+10. Move the mouse and verify visible weapon contact drives hit, guard, parry, kick, and clash effects.
 
 ## Future Structure
 

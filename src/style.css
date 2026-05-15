@@ -55,15 +55,16 @@ textarea {
   justify-items: center;
   padding: 24px;
   background:
-    linear-gradient(180deg, rgba(11, 10, 9, 0.4), rgba(11, 10, 9, 0.74)),
-    radial-gradient(circle at 50% 95%, rgba(98, 84, 63, 0.22), transparent 42%);
+    linear-gradient(90deg, rgba(6, 6, 5, 0.22), rgba(6, 6, 5, 0.08) 52%, rgba(6, 6, 5, 0.32)),
+    linear-gradient(180deg, rgba(9, 8, 7, 0.16), rgba(9, 8, 7, 0.46));
 }
 
 .menu-panel {
   width: min(760px, calc(100vw - 32px));
   border: 1px solid rgba(191, 171, 135, 0.24);
   border-radius: 8px;
-  background: rgba(18, 17, 15, 0.9);
+  background: rgba(16, 14, 12, 0.84);
+  backdrop-filter: blur(2px);
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
   padding: 28px;
 }
@@ -80,6 +81,21 @@ textarea {
   margin: 0 0 24px;
   color: #9d927e;
   font-size: 15px;
+}
+
+.season-badge {
+  display: inline-flex;
+  width: fit-content;
+  margin: 0 0 12px;
+  border: 1px solid rgba(218, 163, 85, 0.32);
+  border-radius: 4px;
+  padding: 5px 8px;
+  color: #e1bd7a;
+  background: rgba(78, 38, 19, 0.34);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
 }
 
 .menu-grid {
