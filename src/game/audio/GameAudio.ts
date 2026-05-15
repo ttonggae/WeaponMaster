@@ -2,6 +2,7 @@ import type { ActionState, ImpactEffect, PlayerId, WeaponType } from "../types";
 
 const BASE_MASTER_GAIN = 0.68;
 const DEFAULT_VOLUME_PERCENT = 50;
+const IN_GAME_VOLUME_MULTIPLIER = 1.5;
 const VOLUME_STORAGE_KEY = "weaponmaster.soundVolume";
 
 interface CombatAudioState {
@@ -20,6 +21,7 @@ export class GameAudio {
   private gameActive = false;
   private unlocked = false;
   private volumePercent = this.loadVolumePercent();
+  private outputVolumeMultiplier = 1;
   private readonly playedEffectIds: number[] = [];
   private readonly lastActions = new Map<PlayerId, ActionState>();
 
@@ -156,43 +158,47 @@ export class GameAudio {
   }
 
   private playImpact(effect: ImpactEffect): void {
-    const force = Math.max(0.7, Math.min(1.8, effect.intensity));
-    if (effect.type === "hit") {
-      this.playBodyHit(force);
-      this.playShortScrape(force * 0.5);
-    } else if (effect.type === "guard") {
-      this.playMetalClang(force, 0.65);
-      this.playBodyHit(force * 0.35);
-    } else if (effect.type === "parry") {
-      this.playMetalClang(force * 1.15, 1);
-      this.playTone(2100, 0.045, 0.05 * force, "triangle");
-    } else if (effect.type === "clash") {
-      this.playMetalClang(force, 0.88);
-    } else if (effect.type === "kick") {
-      this.playBodyHit(force * 0.75);
-    } else if (effect.type === "dust") {
-      this.playNoiseBurst(0.05, 0.012, 420, 0.5);
-    }
+    this.withOutputVolume(IN_GAME_VOLUME_MULTIPLIER, () => {
+      const force = Math.max(0.7, Math.min(1.8, effect.intensity));
+      if (effect.type === "hit") {
+        this.playBodyHit(force);
+        this.playShortScrape(force * 0.5);
+      } else if (effect.type === "guard") {
+        this.playMetalClang(force, 0.65);
+        this.playBodyHit(force * 0.35);
+      } else if (effect.type === "parry") {
+        this.playMetalClang(force * 1.15, 1);
+        this.playTone(2100, 0.045, 0.05 * force, "triangle");
+      } else if (effect.type === "clash") {
+        this.playMetalClang(force, 0.88);
+      } else if (effect.type === "kick") {
+        this.playBodyHit(force * 0.75);
+      } else if (effect.type === "dust") {
+        this.playNoiseBurst(0.05, 0.012, 420, 0.5);
+      }
+    });
   }
 
   private playActionCue(action: ActionState, weaponType: WeaponType): void {
-    if (action === "charge") {
-      this.playNoiseBurst(0.08, 0.028, 540, 0.7);
-    } else if (action === "attack") {
-      this.playWeaponSwing(weaponType);
-    } else if (action === "guard") {
-      this.playMetalClang(0.45, 0.45);
-    } else if (action === "parry") {
-      this.playTone(1420, 0.06, 0.05, "triangle");
-      this.playNoiseBurst(0.05, 0.022, 1900, 1.2);
-    } else if (action === "kick") {
-      this.playNoiseBurst(0.08, 0.036, 340, 0.7);
-    } else if (action === "guardBreak") {
-      this.playWeaponSwing(weaponType, 1.25);
-      this.playTone(125, 0.12, 0.045, "sine");
-    } else if (action === "feint") {
-      this.playNoiseBurst(0.045, 0.018, 900, 1.5);
-    }
+    this.withOutputVolume(IN_GAME_VOLUME_MULTIPLIER, () => {
+      if (action === "charge") {
+        this.playNoiseBurst(0.08, 0.028, 540, 0.7);
+      } else if (action === "attack") {
+        this.playWeaponSwing(weaponType);
+      } else if (action === "guard") {
+        this.playMetalClang(0.45, 0.45);
+      } else if (action === "parry") {
+        this.playTone(1420, 0.06, 0.05, "triangle");
+        this.playNoiseBurst(0.05, 0.022, 1900, 1.2);
+      } else if (action === "kick") {
+        this.playNoiseBurst(0.08, 0.036, 340, 0.7);
+      } else if (action === "guardBreak") {
+        this.playWeaponSwing(weaponType, 1.25);
+        this.playTone(125, 0.12, 0.045, "sine");
+      } else if (action === "feint") {
+        this.playNoiseBurst(0.045, 0.018, 900, 1.5);
+      }
+    });
   }
 
   private playWeaponSwing(weaponType: WeaponType, force = 1): void {
@@ -243,7 +249,7 @@ export class GameAudio {
     filter.frequency.setValueAtTime(frequency, context.currentTime);
     filter.Q.setValueAtTime(q, context.currentTime);
     const gain = context.createGain();
-    gain.gain.setValueAtTime(Math.max(0.001, volume), context.currentTime);
+    gain.gain.setValueAtTime(Math.max(0.001, volume * this.outputVolumeMultiplier), context.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + duration);
 
     source.connect(filter);
@@ -271,7 +277,7 @@ export class GameAudio {
     oscillator.type = type;
     oscillator.frequency.setValueAtTime(frequency, now);
     oscillator.frequency.exponentialRampToValueAtTime(Math.max(30, frequency * 0.76), now + duration);
-    gain.gain.setValueAtTime(Math.max(0.001, volume), now);
+    gain.gain.setValueAtTime(Math.max(0.001, volume * this.outputVolumeMultiplier), now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
     oscillator.connect(gain);
     gain.connect(master);
@@ -303,6 +309,16 @@ export class GameAudio {
     // 50% is intentionally three times the original MVP output level.
     const multiplier = (this.volumePercent / 100) * 6;
     this.master.gain.setTargetAtTime(BASE_MASTER_GAIN * multiplier, this.context.currentTime, 0.018);
+  }
+
+  private withOutputVolume(multiplier: number, play: () => void): void {
+    const previous = this.outputVolumeMultiplier;
+    this.outputVolumeMultiplier = previous * multiplier;
+    try {
+      play();
+    } finally {
+      this.outputVolumeMultiplier = previous;
+    }
   }
 
   private loadVolumePercent(): number {

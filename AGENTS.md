@@ -53,6 +53,7 @@ Manual checks:
 - UI text must wrap or truncate inside panels/buttons instead of spilling outside boxes.
 - Menu audio uses short forge crackle/hammer events without a continuous drone.
 - Bottom-left Settings controls global sound volume, with 50% mapped to three times the original MVP output.
+- In-game action and impact sounds apply an extra 1.5x multiplier over the shared Settings volume.
 - In-game action changes and impact effects produce matching procedural sound effects.
 - Ranked/Casual immediately start matchmaking and show the centered matchmaking overlay.
 - Friendly Match opens only the 6-character room-code panel.

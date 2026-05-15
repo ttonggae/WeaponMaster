@@ -101,6 +101,7 @@ Rank writes are client-side in this MVP, so they are not cheat-proof. The rank s
 - Longsword, spear, and axe weapon data with mouse-driven weapon posture.
 - Health, stamina, charge, attack, guard, parry, feint, kick, stun, hitstop, camera shake, and impact effects.
 - In-game action transitions and hit, guard, parry, clash, kick, and dust effects trigger matching procedural sound effects.
+- In-game action and impact sounds are boosted 1.5x above the shared Settings volume so combat reads more clearly than menu ambience.
 - `WeaponPoseSystem` calculates fixed-length weapon pose data shared by character posing, weapon rendering, and hit detection.
 - Hit, guard, and parry checks use the same blade/tip/head strike zones that are drawn on screen.
 
@@ -192,7 +193,7 @@ Mouse distance does not change weapon length. The mouse only defines the target 
 The first networking version is not server-authoritative. Both clients simulate from exchanged inputs and send periodic core-state snapshots for drift checks. This cannot fully prevent cheating, but the code keeps state comparison and correction isolated so later server authority or rollback can be added without rewriting core combat.
 
 Audio is generated through Web Audio rather than external files. Browsers block autoplay before a user gesture, so sound starts after the first click/key press. Menu audio stops whenever the main menu is hidden. In-game audio also listens to action state changes, so swings, guard posture, parry, kick, and guard break have cues even before a hit occurs.
-The bottom-left Settings panel stores sound volume locally. The slider is tuned so the default 50% setting is the louder baseline requested for current testing, while 100% leaves headroom for noisy environments.
+The bottom-left Settings panel stores sound volume locally. The slider is tuned so the default 50% setting is the louder baseline requested for current testing, while 100% leaves headroom for noisy environments. Combat cues apply an additional 1.5x layer over that shared volume; menu ambience does not.
 
 ## Verification
 
