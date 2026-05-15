@@ -43,6 +43,7 @@ export class Game {
   private lastTime = performance.now();
   private firebaseServices: FirebaseServices | null = null;
   private authProfile: AuthProfile | null = null;
+  private authPromise: Promise<AuthProfile> | null = null;
   private matchmakingService: MatchmakingService | null = null;
   private matchmakingPollId: number | null = null;
   private signalingUnsubs: Unsubscribe[] = [];
@@ -69,6 +70,7 @@ export class Game {
     });
 
     void this.refreshLeaderboard();
+    void this.restoreCachedFirebaseUser();
 
     window.addEventListener("keydown", (event) => {
       if (event.code === "Escape" && this.state.mode !== "menu") {
@@ -344,10 +346,50 @@ export class Game {
       return this.authProfile;
     }
 
-    this.authProfile = await new FirebaseAuthService(services).signInGoogle();
-    this.menu.setAccountName(this.authProfile.displayName);
-    await this.refreshLeaderboard();
-    return this.authProfile;
+    if (!this.authPromise) {
+      this.authPromise = this.signInAndSyncProfile(services);
+    }
+    return this.authPromise;
+  }
+
+  private async restoreCachedFirebaseUser(): Promise<void> {
+    const services = getFirebaseServices();
+    if (!services) {
+      return;
+    }
+
+    this.firebaseServices = services;
+    try {
+      const profile = await new FirebaseAuthService(services).getCachedProfile();
+      if (!profile) {
+        this.menu.setAccountStatus("Sign in with Google once to save score.");
+        return;
+      }
+      this.authProfile = profile;
+      await this.syncRankProfile(profile, services);
+    } catch {
+      this.menu.setAccountStatus("Google sign-in will retry when online mode starts.");
+    }
+  }
+
+  private async signInAndSyncProfile(services: FirebaseServices): Promise<AuthProfile> {
+    try {
+      const profile = await new FirebaseAuthService(services).signInGoogle();
+      this.authProfile = profile;
+      await this.syncRankProfile(profile, services);
+      return profile;
+    } catch (error) {
+      this.authPromise = null;
+      throw error;
+    }
+  }
+
+  private async syncRankProfile(profile: AuthProfile, services: FirebaseServices): Promise<void> {
+    const rankService = new RankService(services);
+    const entry = await rankService.ensurePlayerEntry(profile);
+    this.menu.setAccountName(profile.displayName);
+    this.menu.setPlayerScore(entry);
+    this.menu.setLeaderboard(await rankService.getLeaderboard());
   }
 
   private handleNetMessage(message: NetMessage): void {
@@ -478,10 +520,11 @@ export class Game {
     }
 
     try {
-      await new RankService(services).recordResult(
+      const entry = await new RankService(services).recordResult(
         this.authProfile,
         this.state.winner === this.localPlayerId,
       );
+      this.menu.setPlayerScore(entry);
       await this.refreshLeaderboard();
     } catch {
       // Ranked writes are best-effort until a verified result service exists.
@@ -495,7 +538,11 @@ export class Game {
     }
 
     try {
-      this.menu.setLeaderboard(await new RankService(services).getLeaderboard());
+      const rankService = new RankService(services);
+      if (this.authProfile) {
+        this.menu.setPlayerScore(await rankService.getPlayerEntry(this.authProfile.uid));
+      }
+      this.menu.setLeaderboard(await rankService.getLeaderboard());
     } catch {
       // Leaderboard read can fail if Firestore rules have not been updated yet.
     }

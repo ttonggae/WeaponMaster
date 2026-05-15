@@ -122,9 +122,16 @@ textarea {
 }
 
 .account-line {
-  margin: 0 0 16px;
+  margin: 0 0 6px;
   color: #b9ad94;
   font-size: 13px;
+}
+
+.score-line {
+  margin: 0 0 16px;
+  color: #d7c69b;
+  font-size: 13px;
+  font-weight: 650;
 }
 
 .leaderboard-panel {

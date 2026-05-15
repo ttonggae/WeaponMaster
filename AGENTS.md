@@ -49,6 +49,7 @@ Manual checks:
 - Friendly Match opens only the 6-character room-code panel.
 - Google sign-in starts when entering an online mode.
 - Season Top 10 renders when Firebase/Firestore rules are configured.
+- The local player's stored score starts at 1000 and is visible after Google auth.
 - Matchmaking UI and friendly panel hide after WebRTC connects.
 - Both fighters are visible after connection.
 - Longsword, spear, and axe can be selected for the local player.
@@ -102,8 +103,10 @@ Manual checks:
 
 - `CURRENT_SEASON_ID` in `constants.ts` selects the active season.
 - Ranked wins add score and ranked losses subtract score.
+- Personal score is stored under `rankScores/{seasonId}/players/{uid}`.
+- Public leaderboard records are stored under `rankings/{seasonId}/players/{uid}`.
 - Leaderboard queries only the top 10 records for the active season.
-- Rank records below top 10 may be deleted after result writes.
+- Records below top 10 may be deleted from `rankings`; do not delete personal score docs for this reason.
 - Client-side rank writes are MVP-only and must stay isolated for future trusted validation.
 
 ## Forbidden
@@ -135,5 +138,6 @@ Manual checks:
 - Visible weapon geometry drives hit detection.
 - Firebase matchmaking, friendly room, signaling, Google auth, and rank service fail gracefully without config.
 - Season Top 10 leaderboard exists.
+- Current player score is displayed and persisted from a 1000 point default.
 - Code is separated by responsibility.
 - README documents run steps, Firebase setup, controls, modes, and ranking.

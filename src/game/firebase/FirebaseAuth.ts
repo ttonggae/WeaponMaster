@@ -1,7 +1,11 @@
 import {
+  browserLocalPersistence,
   getAuth,
   GoogleAuthProvider,
+  onAuthStateChanged,
+  setPersistence,
   signInWithPopup,
+  type Auth,
   type User,
 } from "firebase/auth";
 import type { AuthProfile } from "../types";
@@ -10,8 +14,16 @@ import type { FirebaseServices } from "./FirebaseApp";
 export class FirebaseAuthService {
   constructor(private readonly services: FirebaseServices) {}
 
+  async getCachedProfile(): Promise<AuthProfile | null> {
+    const auth = getAuth(this.services.app);
+    await this.waitForInitialAuthState(auth);
+    return auth.currentUser ? this.toProfile(auth.currentUser) : null;
+  }
+
   async signInGoogle(): Promise<AuthProfile> {
     const auth = getAuth(this.services.app);
+    await setPersistence(auth, browserLocalPersistence);
+    await this.waitForInitialAuthState(auth);
     if (auth.currentUser) {
       return this.toProfile(auth.currentUser);
     }
@@ -48,5 +60,21 @@ export class FirebaseAuthService {
       return String((error as { code?: unknown }).code ?? "");
     }
     return "";
+  }
+
+  private waitForInitialAuthState(auth: Auth): Promise<void> {
+    return new Promise((resolve) => {
+      const unsubscribe = onAuthStateChanged(
+        auth,
+        () => {
+          unsubscribe();
+          resolve();
+        },
+        () => {
+          unsubscribe();
+          resolve();
+        },
+      );
+    });
   }
 }

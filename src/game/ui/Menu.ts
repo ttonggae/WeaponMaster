@@ -11,6 +11,7 @@ export class Menu {
   readonly root: HTMLDivElement;
   private readonly weaponSelect = new WeaponSelect("longsword");
   private readonly accountLine = document.createElement("div");
+  private readonly scoreLine = document.createElement("div");
   private readonly leaderboardList = document.createElement("ol");
 
   constructor(parent: HTMLElement, callbacks: MenuCallbacks) {
@@ -30,7 +31,9 @@ export class Menu {
       "Heavy 1v1 medieval duel. Ranked and casual matching use Google sign-in for identity.";
 
     this.accountLine.className = "account-line";
-    this.accountLine.textContent = "Google sign-in starts when you enter an online mode.";
+    this.accountLine.textContent = "Google sign-in is restored automatically after the first login.";
+    this.scoreLine.className = "score-line";
+    this.scoreLine.textContent = "Score: not signed in";
 
     const grid = document.createElement("div");
     grid.className = "menu-grid single";
@@ -63,7 +66,7 @@ export class Menu {
     leaderboard.append(leaderboardTitle, this.leaderboardList);
 
     actions.append(rankedButton, casualButton, friendlyButton);
-    panel.append(title, subtitle, this.accountLine, grid, actions, leaderboard);
+    panel.append(title, subtitle, this.accountLine, this.scoreLine, grid, actions, leaderboard);
     this.root.append(panel);
     parent.append(this.root);
   }
@@ -78,6 +81,18 @@ export class Menu {
 
   setAccountName(name: string): void {
     this.accountLine.textContent = `Signed in as ${name}`;
+  }
+
+  setAccountStatus(text: string): void {
+    this.accountLine.textContent = text;
+  }
+
+  setPlayerScore(entry: LeaderboardEntry | null): void {
+    if (!entry) {
+      this.scoreLine.textContent = "Score: not signed in";
+      return;
+    }
+    this.scoreLine.textContent = `Score: ${entry.score} (${entry.wins}W/${entry.losses}L)`;
   }
 
   setLeaderboard(entries: LeaderboardEntry[]): void {

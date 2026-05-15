@@ -71,8 +71,10 @@ There is no local duel or manual copy/paste P2P entry point in the current UI. F
 - Base score: `1000`.
 - Win: `+25`.
 - Loss: `-15`.
+- Personal score storage: `rankScores/{seasonId}/players/{uid}`.
+- Leaderboard storage: `rankings/{seasonId}/players/{uid}`.
 - Leaderboard: top 10 ranked records for the current season.
-- After ranked result writes, entries below rank 10 are trimmed from Firestore.
+- Entries below rank 10 are removed from the public leaderboard collection, while personal scores stay saved.
 
 To reset for a new season, change `CURRENT_SEASON_ID` to a new value such as `season-2`. The old season stays in Firestore under its own path unless manually deleted.
 
@@ -83,7 +85,7 @@ Rank writes are client-side in this MVP, so they are not cheat-proof. The rank s
 - Main menu has exactly three modes: Ranked Match, Casual Match, Friendly Match.
 - Ranked/Casual show a centered matchmaking overlay while searching.
 - Matchmaking UI is hidden once WebRTC connects and the duel begins.
-- Season Top 10 leaderboard is shown on the main menu when Firebase is configured.
+- Current player score and Season Top 10 leaderboard are shown on the main menu when Firebase is configured.
 - Google sign-in replaces anonymous auth to avoid confusing player identity.
 - Wide arena with a smooth player-focused camera and separated world/screen coordinates.
 - Longsword, spear, and axe weapon data with mouse-driven weapon posture.
@@ -150,6 +152,10 @@ service cloud.firestore {
       }
     }
 
+    match /rankScores/{seasonId}/players/{uid} {
+      allow read, create, update, delete: if signedIn();
+    }
+
     match /rankings/{seasonId}/players/{uid} {
       allow read: if true;
       allow create, update, delete: if signedIn();
@@ -162,7 +168,7 @@ service cloud.firestore {
 }
 ```
 
-The ranking write/delete rule is intentionally permissive for the MVP because top-10 trimming is currently client-side. Tighten this when rank validation moves to Cloud Functions or a trusted server.
+The rank write/delete rules are intentionally permissive for the MVP because score updates and top-10 publishing are currently client-side. Tighten this when rank validation moves to Cloud Functions or a trusted server.
 
 ## Design Notes
 
@@ -189,8 +195,9 @@ Browser checks:
 3. Press Friendly and confirm only the code panel appears.
 4. Connect two browser sessions through ranked/casual matchmaking or friendly room code.
 5. Confirm the connection panel/overlay hides after WebRTC connects.
-6. Finish a ranked duel and confirm the Season Top 10 can update.
-7. Move the mouse and verify visible weapon contact drives hit, guard, parry, kick, and clash effects.
+6. Confirm Google auth creates a 1000 point score for a new player and shows it in the menu.
+7. Finish a ranked duel and confirm the personal score and Season Top 10 can update.
+8. Move the mouse and verify visible weapon contact drives hit, guard, parry, kick, and clash effects.
 
 ## Future Structure
 
