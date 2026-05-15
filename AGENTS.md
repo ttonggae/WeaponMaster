@@ -52,6 +52,7 @@ Manual checks:
 - Loadout columns must read left-to-right as character/stats, equipment category, selected category item choices, and selected item details/equip action.
 - UI text must wrap or truncate inside panels/buttons instead of spilling outside boxes.
 - Menu audio uses short forge crackle/hammer events without a continuous drone.
+- Bottom-left Settings controls global sound volume, with 50% mapped to three times the original MVP output.
 - In-game action changes and impact effects produce matching procedural sound effects.
 - Ranked/Casual immediately start matchmaking and show the centered matchmaking overlay.
 - Friendly Match opens only the 6-character room-code panel.
@@ -78,6 +79,7 @@ Manual checks:
 - Do not add external art assets for the MVP.
 - Do not add external audio assets for menu ambience unless explicitly requested.
 - Do not use a continuous menu oscillator that creates a steady buzzing tone.
+- Do not bypass the shared `GameAudio` master volume path for new sounds.
 - Keep characters as head, torso, left/right arm, and left/right leg only. No elbow or knee joint model.
 
 ## Combat Hit Rules
@@ -142,6 +144,7 @@ Manual checks:
 - Menu positions title/season, Top 10, personal score, loadout, and match controls in their requested areas.
 - Loadout supports weapon category item selection and locked future categories with stats/descriptions/equip button state.
 - UI text stays inside its panels/buttons across desktop and mobile widths.
+- Bottom-left Settings panel can adjust stored global sound volume.
 - In-game action, hit, guard, parry, clash, kick, and dust effects have procedural sound cues.
 - Ranked/Casual matchmaking overlay appears in the center immediately after click.
 - Friendly room code create/join works.

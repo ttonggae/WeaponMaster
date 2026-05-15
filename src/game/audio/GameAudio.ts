@@ -1,5 +1,9 @@
 import type { ActionState, ImpactEffect, PlayerId, WeaponType } from "../types";
 
+const BASE_MASTER_GAIN = 0.68;
+const DEFAULT_VOLUME_PERCENT = 50;
+const VOLUME_STORAGE_KEY = "weaponmaster.soundVolume";
+
 interface CombatAudioState {
   id: PlayerId;
   action: ActionState;
@@ -9,17 +13,33 @@ interface CombatAudioState {
 export class GameAudio {
   private context: AudioContext | null = null;
   private master: GainNode | null = null;
+  private limiter: DynamicsCompressorNode | null = null;
   private menuCrackleTimer: number | null = null;
   private menuHammerTimer: number | null = null;
   private menuActive = false;
   private gameActive = false;
   private unlocked = false;
+  private volumePercent = this.loadVolumePercent();
   private readonly playedEffectIds: number[] = [];
   private readonly lastActions = new Map<PlayerId, ActionState>();
 
   constructor() {
     window.addEventListener("pointerdown", () => void this.unlock(), { once: true });
     window.addEventListener("keydown", () => void this.unlock(), { once: true });
+  }
+
+  getVolumePercent(): number {
+    return this.volumePercent;
+  }
+
+  setVolumePercent(percent: number): void {
+    this.volumePercent = Math.max(0, Math.min(100, Math.round(percent)));
+    try {
+      window.localStorage.setItem(VOLUME_STORAGE_KEY, String(this.volumePercent));
+    } catch {
+      // Volume still applies for the current session if storage is unavailable.
+    }
+    this.updateMasterGain();
   }
 
   setMenuActive(active: boolean): void {
@@ -263,10 +283,38 @@ export class GameAudio {
     const context = this.getContext();
     if (!this.master) {
       this.master = context.createGain();
-      this.master.gain.setValueAtTime(0.68, context.currentTime);
-      this.master.connect(context.destination);
+      this.limiter = context.createDynamicsCompressor();
+      this.limiter.threshold.setValueAtTime(-8, context.currentTime);
+      this.limiter.knee.setValueAtTime(18, context.currentTime);
+      this.limiter.ratio.setValueAtTime(8, context.currentTime);
+      this.limiter.attack.setValueAtTime(0.004, context.currentTime);
+      this.limiter.release.setValueAtTime(0.12, context.currentTime);
+      this.master.connect(this.limiter);
+      this.limiter.connect(context.destination);
+      this.updateMasterGain();
     }
     return this.master;
+  }
+
+  private updateMasterGain(): void {
+    if (!this.master || !this.context) {
+      return;
+    }
+    // 50% is intentionally three times the original MVP output level.
+    const multiplier = (this.volumePercent / 100) * 6;
+    this.master.gain.setTargetAtTime(BASE_MASTER_GAIN * multiplier, this.context.currentTime, 0.018);
+  }
+
+  private loadVolumePercent(): number {
+    try {
+      const saved = Number(window.localStorage.getItem(VOLUME_STORAGE_KEY));
+      if (Number.isFinite(saved)) {
+        return Math.max(0, Math.min(100, Math.round(saved)));
+      }
+    } catch {
+      // Fall through to the default if browser storage is blocked.
+    }
+    return DEFAULT_VOLUME_PERCENT;
   }
 
   private getContext(): AudioContext {

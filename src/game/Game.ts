@@ -23,6 +23,7 @@ import type { AuthProfile, ControlState, MatchType, PlayerId, WeaponType } from 
 import { ConnectionPanel } from "./ui/ConnectionPanel";
 import { MatchOverlay } from "./ui/MatchOverlay";
 import { Menu } from "./ui/Menu";
+import { SettingsPanel } from "./ui/SettingsPanel";
 
 type Unsubscribe = () => void;
 
@@ -34,6 +35,7 @@ export class Game {
   private readonly menu: Menu;
   private readonly connectionPanel: ConnectionPanel;
   private readonly matchOverlay: MatchOverlay;
+  private readonly settingsPanel: SettingsPanel;
   private readonly audio = new GameAudio();
   private readonly clientSessionId = crypto.randomUUID();
   private p2p: P2PClient | null = null;
@@ -69,6 +71,10 @@ export class Game {
     });
     this.matchOverlay = new MatchOverlay(uiRoot, {
       onCancel: () => this.cancelOnlineSearch(),
+    });
+    this.settingsPanel = new SettingsPanel(uiRoot, {
+      initialVolume: this.audio.getVolumePercent(),
+      onVolumeChange: (volumePercent) => this.audio.setVolumePercent(volumePercent),
     });
     this.audio.setMenuActive(true);
 

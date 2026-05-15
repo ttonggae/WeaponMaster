@@ -87,6 +87,7 @@ Rank writes are client-side in this MVP, so they are not cheat-proof. The rank s
 - Main menu displays the active season number and concept name.
 - Main menu canvas background is a procedural forge with furnace glow, anvil, tools, and sparks.
 - Main menu sound uses short Web Audio crackles and hammer strikes after the first browser input gesture.
+- Sound volume is controlled from the bottom-left Settings panel; 50% equals three times the original MVP output.
 - Main menu places the title/season at top-left, Season Top 10 plus personal score at top-right, and match controls at bottom-center.
 - Loadout opens from a button above match controls and shows a centered equipment box with four columns: character/stats, equipment category, item selection, and selected item details/equip action.
 - Loadout currently supports weapon selection; usable gear, armor, and passive categories are visible but locked for future updates.
@@ -191,6 +192,7 @@ Mouse distance does not change weapon length. The mouse only defines the target 
 The first networking version is not server-authoritative. Both clients simulate from exchanged inputs and send periodic core-state snapshots for drift checks. This cannot fully prevent cheating, but the code keeps state comparison and correction isolated so later server authority or rollback can be added without rewriting core combat.
 
 Audio is generated through Web Audio rather than external files. Browsers block autoplay before a user gesture, so sound starts after the first click/key press. Menu audio stops whenever the main menu is hidden. In-game audio also listens to action state changes, so swings, guard posture, parry, kick, and guard break have cues even before a hit occurs.
+The bottom-left Settings panel stores sound volume locally. The slider is tuned so the default 50% setting is the louder baseline requested for current testing, while 100% leaves headroom for noisy environments.
 
 ## Verification
 
@@ -210,13 +212,14 @@ Browser checks:
 6. Click locked usable gear/armor/passive categories and confirm they show descriptions and a disabled Locked button.
 7. Resize the browser and confirm UI text stays inside its panels/buttons.
 8. Click once on the page and confirm forge crackle/hammer sound plays only while the main menu is visible, without a steady buzz.
-9. Press Ranked or Casual and confirm the centered matchmaking overlay appears immediately.
-10. Press Friendly and confirm the room-code panel appears centered.
-11. Connect two browser sessions through ranked/casual matchmaking or friendly room code.
-12. Confirm the connection panel/overlay hides after WebRTC connects.
-13. Confirm Google auth creates a 1000 point score for a new player and shows it in the menu.
-14. Finish a ranked duel and confirm the personal score and Season Top 10 can update.
-15. Verify attack, guard, parry, guard break, kick, hit, guard, and clash events produce audible in-game cues.
+9. Open the bottom-left Settings panel and confirm the Sound slider changes menu and combat volume.
+10. Press Ranked or Casual and confirm the centered matchmaking overlay appears immediately.
+11. Press Friendly and confirm the room-code panel appears centered.
+12. Connect two browser sessions through ranked/casual matchmaking or friendly room code.
+13. Confirm the connection panel/overlay hides after WebRTC connects.
+14. Confirm Google auth creates a 1000 point score for a new player and shows it in the menu.
+15. Finish a ranked duel and confirm the personal score and Season Top 10 can update.
+16. Verify attack, guard, parry, guard break, kick, hit, guard, and clash events produce audible in-game cues.
 
 ## Future Structure
 

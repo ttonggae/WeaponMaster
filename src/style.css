@@ -23,6 +23,7 @@ textarea,
 .match-menu-panel,
 .connection-panel,
 .match-overlay-panel,
+.settings-panel,
 .loadout-modal,
 .loadout-character-panel,
 .loadout-categories,
@@ -38,6 +39,7 @@ textarea,
 .match-menu-panel,
 .connection-panel,
 .match-overlay-panel,
+.settings-panel,
 .loadout-modal,
 .loadout-character-panel,
 .loadout-categories,
@@ -79,7 +81,8 @@ textarea {
 }
 
 .menu-shell,
-.connection-panel {
+.connection-panel,
+.settings-panel {
   pointer-events: auto;
 }
 
@@ -101,6 +104,7 @@ textarea {
 .menu-title-block,
 .leaderboard-panel,
 .match-menu-panel,
+.settings-panel,
 .loadout-modal {
   border: 1px solid rgba(191, 171, 135, 0.22);
   border-radius: 8px;
@@ -132,6 +136,55 @@ textarea {
   width: min(520px, calc(100vw - 48px));
   padding: 16px;
   transform: translateX(-50%);
+}
+
+.settings-panel {
+  position: absolute;
+  left: 24px;
+  bottom: 24px;
+  display: grid;
+  gap: 10px;
+  width: min(260px, calc(100vw - 48px));
+  padding: 12px;
+}
+
+.settings-panel.collapsed {
+  width: auto;
+  padding: 0;
+  border-color: rgba(191, 171, 135, 0.16);
+  background: rgba(16, 14, 12, 0.66);
+  box-shadow: 0 14px 42px rgba(0, 0, 0, 0.34);
+}
+
+.settings-toggle {
+  min-width: 112px;
+}
+
+.settings-panel.collapsed .settings-controls {
+  display: none;
+}
+
+.settings-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-field {
+  display: grid;
+  gap: 8px;
+  color: #cfc2a9;
+  font-size: 13px;
+}
+
+.settings-label-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-field input[type="range"] {
+  width: 100%;
+  accent-color: #c7a96b;
 }
 
 .menu-title {
