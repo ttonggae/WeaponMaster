@@ -1,5 +1,5 @@
 import { CombatSystem } from "./combat/CombatSystem";
-import { ForgeAudio } from "./audio/ForgeAudio";
+import { GameAudio } from "./audio/GameAudio";
 import { DEFAULT_REMOTE_WEAPON, MAX_DELTA_SECONDS } from "./constants";
 import { FirebaseAuthService } from "./firebase/FirebaseAuth";
 import {
@@ -34,7 +34,7 @@ export class Game {
   private readonly menu: Menu;
   private readonly connectionPanel: ConnectionPanel;
   private readonly matchOverlay: MatchOverlay;
-  private readonly forgeAudio = new ForgeAudio();
+  private readonly audio = new GameAudio();
   private readonly clientSessionId = crypto.randomUUID();
   private p2p: P2PClient | null = null;
   private stateSync: StateSync | null = null;
@@ -70,7 +70,7 @@ export class Game {
     this.matchOverlay = new MatchOverlay(uiRoot, {
       onCancel: () => this.cancelOnlineSearch(),
     });
-    this.forgeAudio.setMenuActive(true);
+    this.audio.setMenuActive(true);
 
     void this.refreshLeaderboard();
     void this.restoreCachedFirebaseUser();
@@ -92,6 +92,7 @@ export class Game {
 
     this.state.updateVisualTimers(dt);
     this.update(dt);
+    this.audio.playNewEffects(this.state.effects);
     this.renderer.render(this.state, this.localPlayerId, dt);
     requestAnimationFrame(this.loop);
   };
@@ -136,7 +137,8 @@ export class Game {
     this.localP2PWeapon = localWeapon;
     this.fallbackRemoteWeapon = DEFAULT_REMOTE_WEAPON;
     this.menu.hide();
-    this.forgeAudio.setMenuActive(false);
+    this.audio.setMenuActive(false);
+    this.audio.setGameActive(true);
     this.connectionPanel.hide();
     this.matchOverlay.show(
       undefined,
@@ -161,7 +163,8 @@ export class Game {
     this.localP2PWeapon = localWeapon;
     this.fallbackRemoteWeapon = DEFAULT_REMOTE_WEAPON;
     this.menu.hide();
-    this.forgeAudio.setMenuActive(false);
+    this.audio.setMenuActive(false);
+    this.audio.setGameActive(true);
     this.matchOverlay.hide();
     this.connectionPanel.show();
   }
@@ -244,7 +247,8 @@ export class Game {
     await this.cancelMatchmaking();
     this.currentMatchType = null;
     this.menu.show();
-    this.forgeAudio.setMenuActive(true);
+    this.audio.setGameActive(false);
+    this.audio.setMenuActive(true);
   }
 
   private async startSignaledHost(
@@ -421,7 +425,8 @@ export class Game {
     this.connectionPanel.hide();
     this.matchOverlay.hide();
     this.menu.show();
-    this.forgeAudio.setMenuActive(true);
+    this.audio.setGameActive(false);
+    this.audio.setMenuActive(true);
     void this.refreshLeaderboard();
   }
 

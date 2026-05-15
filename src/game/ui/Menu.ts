@@ -19,8 +19,11 @@ export class Menu {
     this.root = document.createElement("div");
     this.root.className = "menu-shell";
 
-    const panel = document.createElement("section");
+    const panel = document.createElement("div");
     panel.className = "menu-panel";
+
+    const hero = document.createElement("section");
+    hero.className = "menu-hero";
 
     const title = document.createElement("h1");
     title.className = "menu-title";
@@ -39,6 +42,12 @@ export class Menu {
     this.accountLine.textContent = "Google sign-in is restored automatically after the first login.";
     this.scoreLine.className = "score-line";
     this.scoreLine.textContent = "Score: not signed in";
+
+    const side = document.createElement("section");
+    side.className = "menu-side";
+
+    const controls = document.createElement("div");
+    controls.className = "menu-controls-panel";
 
     const grid = document.createElement("div");
     grid.className = "menu-grid single";
@@ -71,7 +80,10 @@ export class Menu {
     leaderboard.append(leaderboardTitle, this.leaderboardList);
 
     actions.append(rankedButton, casualButton, friendlyButton);
-    panel.append(title, season, subtitle, this.accountLine, this.scoreLine, grid, actions, leaderboard);
+    controls.append(grid, actions);
+    hero.append(title, season, subtitle, this.accountLine, this.scoreLine);
+    side.append(controls, leaderboard);
+    panel.append(hero, side);
     this.root.append(panel);
     parent.append(this.root);
   }

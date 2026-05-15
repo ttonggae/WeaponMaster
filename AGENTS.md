@@ -47,7 +47,8 @@ Manual checks:
 
 - The menu exposes exactly three modes: Ranked Match, Casual Match, Friendly Match.
 - The menu shows the current season number/name and a procedural forge background.
-- Forge ambience starts after the first click/key press and stops when the main menu is hidden.
+- Menu audio uses short forge crackle/hammer events without a continuous drone.
+- In-game impact effects produce matching procedural sound effects.
 - Ranked/Casual immediately start matchmaking and show the centered matchmaking overlay.
 - Friendly Match opens only the 6-character room-code panel.
 - Google sign-in starts when entering an online mode.
@@ -72,6 +73,7 @@ Manual checks:
 - Use short comments only for non-obvious decisions.
 - Do not add external art assets for the MVP.
 - Do not add external audio assets for menu ambience unless explicitly requested.
+- Do not use a continuous menu oscillator that creates a steady buzzing tone.
 - Keep characters as head, torso, left/right arm, and left/right leg only. No elbow or knee joint model.
 
 ## Combat Hit Rules
@@ -132,7 +134,8 @@ Manual checks:
 - `npm run build` succeeds.
 - Menu shows only Ranked Match, Casual Match, Friendly Match.
 - Menu shows active season number/name.
-- Menu has procedural forge visuals and menu-only forge ambience.
+- Menu has procedural forge visuals and menu-only forge event audio.
+- In-game hit, guard, parry, clash, kick, and dust effects have procedural sound cues.
 - Ranked/Casual matchmaking overlay appears in the center immediately after click.
 - Friendly room code create/join works.
 - Two characters render after connection.
