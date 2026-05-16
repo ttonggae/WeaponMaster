@@ -125,7 +125,11 @@ export class P2PClient {
     peer.onconnectionstatechange = () => {
       const state = peer.connectionState;
       if (state === "connected") {
-        this.setStatus("connected");
+        if (this.channel?.readyState === "open") {
+          this.setStatus("connected");
+        } else {
+          this.setStatus("connecting", "Peer connected. Opening DataChannel...");
+        }
       } else if (state === "failed") {
         this.setStatus("error", "WebRTC connection failed.");
       } else if (state === "closed" || state === "disconnected") {
@@ -151,6 +155,9 @@ export class P2PClient {
         this.setStatus("error", "Received malformed network message.");
       }
     };
+    if (channel.readyState === "open") {
+      this.setStatus("connected");
+    }
   }
 
   private waitForIce(peer: RTCPeerConnection): Promise<void> {

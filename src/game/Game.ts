@@ -26,7 +26,6 @@ import { Menu } from "./ui/Menu";
 import { SettingsPanel } from "./ui/SettingsPanel";
 
 type Unsubscribe = () => void;
-const P2P_CONNECT_TIMEOUT_MS = 25_000;
 
 export class Game {
   private readonly state = new DuelState();
@@ -57,7 +56,7 @@ export class Game {
   private activeSignalingRoomId: string | null = null;
   private activeSignalingCollection: "friendlyRooms" | "matchRooms" | null = null;
   private signalingCleanupTimer: number | null = null;
-  private p2pConnectTimeoutId: number | null = null;
+  private duelStartedForConnection = false;
   private currentMatchType: MatchType | null = null;
   private rankResultRecorded = false;
 
@@ -190,6 +189,7 @@ export class Game {
     this.closeP2P();
     this.localPlayerId = localPlayerId;
     this.sentReady = false;
+    this.duelStartedForConnection = false;
     this.stateSync = new StateSync(localPlayerId, this.remotePlayerId(localPlayerId));
     this.p2p = new P2PClient();
     this.p2p.onMessage((message) => this.handleNetMessage(message));
@@ -197,7 +197,7 @@ export class Game {
       this.state.connectionStatus = status;
       this.connectionPanel.setStatus(detail ? `${status}: ${detail}` : status);
       if (status === "connected") {
-        this.clearP2PConnectTimeout();
+        this.beginConnectedDuel();
         this.trySendReady();
         this.connectionPanel.hide();
         this.matchOverlay.hide();
@@ -284,10 +284,12 @@ export class Game {
     this.activeSignalingCollection = collectionName;
     this.currentMatchType = room.matchType ?? this.currentMatchType;
     this.rankResultRecorded = false;
-    this.state.startDuel("p2p", this.localP2PWeapon, this.fallbackRemoteWeapon);
     this.matchOverlay.setCancelable(false);
-    this.matchOverlay.hide();
-    this.startP2PConnectTimeout();
+    if (collectionName === "matchRooms") {
+      this.matchOverlay.show("Connecting P2P", "Opponent found. Exchanging connection data.", false);
+    } else {
+      this.matchOverlay.hide();
+    }
 
     const signaling = new SignalingService(services, collectionName);
     this.p2p?.onIceCandidate((candidate) => {
@@ -324,10 +326,12 @@ export class Game {
     this.activeSignalingCollection = collectionName;
     this.currentMatchType = room.matchType ?? this.currentMatchType;
     this.rankResultRecorded = false;
-    this.state.startDuel("p2p", this.fallbackRemoteWeapon, this.localP2PWeapon);
     this.matchOverlay.setCancelable(false);
-    this.matchOverlay.hide();
-    this.startP2PConnectTimeout();
+    if (collectionName === "matchRooms") {
+      this.matchOverlay.show("Connecting P2P", "Opponent found. Exchanging connection data.", false);
+    } else {
+      this.matchOverlay.hide();
+    }
 
     const signaling = new SignalingService(services, collectionName);
     let answered = false;
@@ -454,7 +458,6 @@ export class Game {
 
   private closeP2P(): void {
     this.stopMatchmakingPolling();
-    this.clearP2PConnectTimeout();
     this.clearMatchmakingWatchers();
     void this.cleanupActiveSignalingRoom();
     this.clearSignalingWatchers();
@@ -462,6 +465,7 @@ export class Game {
     this.p2p = null;
     this.stateSync = null;
     this.sentReady = false;
+    this.duelStartedForConnection = false;
   }
 
   private clearSignalingWatchers(): void {
@@ -571,19 +575,18 @@ export class Game {
     this.matchmakingPollId = null;
   }
 
-  private startP2PConnectTimeout(): void {
-    this.clearP2PConnectTimeout();
-    this.p2pConnectTimeoutId = window.setTimeout(() => {
-      void this.handleP2PConnectionFailure("P2P connection timed out. Please try matchmaking again.");
-    }, P2P_CONNECT_TIMEOUT_MS);
-  }
-
-  private clearP2PConnectTimeout(): void {
-    if (this.p2pConnectTimeoutId === null) {
+  private beginConnectedDuel(): void {
+    if (this.duelStartedForConnection || !this.stateSync) {
       return;
     }
-    window.clearTimeout(this.p2pConnectTimeoutId);
-    this.p2pConnectTimeoutId = null;
+
+    this.duelStartedForConnection = true;
+    const remoteWeapon = this.stateSync.getRemoteWeapon() ?? this.fallbackRemoteWeapon;
+    if (this.localPlayerId === "p1") {
+      this.state.startDuel("p2p", this.localP2PWeapon, remoteWeapon);
+    } else {
+      this.state.startDuel("p2p", remoteWeapon, this.localP2PWeapon);
+    }
   }
 
   private async handleP2PConnectionFailure(detail: string): Promise<void> {
@@ -591,7 +594,6 @@ export class Game {
       return;
     }
 
-    this.clearP2PConnectTimeout();
     this.closeP2P();
     this.acceptedSignalingRoomId = null;
     this.currentMatchType = null;
