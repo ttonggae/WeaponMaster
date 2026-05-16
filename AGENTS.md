@@ -56,6 +56,7 @@ Manual checks:
 - In-game action and impact sounds apply an extra 1.5x multiplier over the shared Settings volume.
 - In-game action changes and impact effects produce matching procedural sound effects.
 - Ranked/Casual immediately start matchmaking and show the centered matchmaking overlay.
+- Matchmaking cancel must only be available while actively searching, not after a room has been accepted.
 - Friendly Match opens only the 6-character room-code panel.
 - Google sign-in starts when entering an online mode.
 - Season Top 10 renders when Firebase/Firestore rules are configured.

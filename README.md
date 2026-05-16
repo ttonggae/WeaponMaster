@@ -95,6 +95,7 @@ Rank writes are client-side in this MVP, so they are not cheat-proof. The rank s
 - Ranked/Casual show a centered matchmaking overlay while searching.
 - Friendly room code UI opens in the center of the screen.
 - Matchmaking UI is hidden once WebRTC connects and the duel begins.
+- The matchmaking cancel action is removed as soon as an opponent is accepted and the duel scene starts.
 - Current player score and Season Top 10 leaderboard are shown on the main menu when Firebase is configured.
 - Google sign-in replaces anonymous auth to avoid confusing player identity.
 - Wide arena with a smooth player-focused camera and separated world/screen coordinates.
@@ -217,10 +218,11 @@ Browser checks:
 10. Press Ranked or Casual and confirm the centered matchmaking overlay appears immediately.
 11. Press Friendly and confirm the room-code panel appears centered.
 12. Connect two browser sessions through ranked/casual matchmaking or friendly room code.
-13. Confirm the connection panel/overlay hides after WebRTC connects.
-14. Confirm Google auth creates a 1000 point score for a new player and shows it in the menu.
-15. Finish a ranked duel and confirm the personal score and Season Top 10 can update.
-16. Verify attack, guard, parry, guard break, kick, hit, guard, and clash events produce audible in-game cues.
+13. Confirm the matchmaking cancel button disappears once an opponent is accepted and the duel scene starts.
+14. Confirm the connection panel/overlay hides after WebRTC connects.
+15. Confirm Google auth creates a 1000 point score for a new player and shows it in the menu.
+16. Finish a ranked duel and confirm the personal score and Season Top 10 can update.
+17. Verify attack, guard, parry, guard break, kick, hit, guard, and clash events produce audible in-game cues.
 
 ## Future Structure
 

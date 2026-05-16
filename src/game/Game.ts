@@ -157,10 +157,12 @@ export class Game {
     try {
       await this.startMatchmaking(matchType);
     } catch (error) {
-      this.matchOverlay.setDetail(
+      this.matchOverlay.show(
+        "\uB9E4\uCE6D \uC2E4\uD328",
         error instanceof Error
           ? error.message
           : "\uB9E4\uCE6D\uC744 \uC2DC\uC791\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.",
+        true,
       );
     }
   }
@@ -274,6 +276,8 @@ export class Game {
     this.currentMatchType = room.matchType ?? this.currentMatchType;
     this.rankResultRecorded = false;
     this.state.startDuel("p2p", this.localP2PWeapon, this.fallbackRemoteWeapon);
+    this.matchOverlay.setCancelable(false);
+    this.matchOverlay.hide();
 
     const signaling = new SignalingService(services, collectionName);
     this.p2p?.onIceCandidate((candidate) => {
@@ -291,7 +295,6 @@ export class Game {
     );
 
     this.connectionPanel.setStatus(room.code ? `Room created: ${room.code}` : "Exchanging offer");
-    this.matchOverlay.setDetail("Opponent found. Connecting P2P...");
     const offer = await this.requireP2P().createOffer();
     await signaling.writeOffer(room.id, JSON.parse(offer) as RTCSessionDescriptionInit);
   }
@@ -312,6 +315,8 @@ export class Game {
     this.currentMatchType = room.matchType ?? this.currentMatchType;
     this.rankResultRecorded = false;
     this.state.startDuel("p2p", this.fallbackRemoteWeapon, this.localP2PWeapon);
+    this.matchOverlay.setCancelable(false);
+    this.matchOverlay.hide();
 
     const signaling = new SignalingService(services, collectionName);
     let answered = false;
@@ -321,7 +326,6 @@ export class Game {
       }
       answered = true;
       this.connectionPanel.setStatus("Exchanging answer");
-      this.matchOverlay.setDetail("Opponent found. Connecting P2P...");
       const answer = await this.requireP2P().createAnswerFromOffer(JSON.stringify(offer));
       await signaling.writeAnswer(room.id, JSON.parse(answer) as RTCSessionDescriptionInit);
     };
@@ -343,7 +347,6 @@ export class Game {
       await answerOffer(room.offer);
     } else {
       this.connectionPanel.setStatus("Exchanging offer");
-      this.matchOverlay.setDetail("Opponent found. Waiting for offer...");
     }
   }
 
