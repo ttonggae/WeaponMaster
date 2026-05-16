@@ -127,6 +127,7 @@ export class StateSync {
       remoteControlled.weaponAngle = remoteSnapshot.weaponAngle;
       remoteControlled.action = remoteSnapshot.action;
       remoteControlled.actionTime = remoteSnapshot.actionTime;
+      remoteControlled.stunBreaksOnHit = remoteSnapshot.stunBreaksOnHit;
       this.driftWarning = `Corrected ${this.remotePlayerId} drift`;
     } else {
       this.driftWarning = "Minor state drift";

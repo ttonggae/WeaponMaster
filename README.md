@@ -102,6 +102,9 @@ Rank writes are client-side in this MVP, so they are not cheat-proof. The rank s
 - Wide arena with a smooth player-focused camera and separated world/screen coordinates.
 - Longsword, spear, and axe weapon data with mouse-driven weapon posture.
 - Health, stamina, charge, attack, guard, parry, feint, kick, stun, hitstop, camera shake, and impact effects.
+- Parry counters an incoming attack for 1.5x the defender weapon damage.
+- Feint cancels charge directly back to idle, with pose blending but no recovery lockout.
+- Guard break uses the weapon grip/shaft as its visible strike data. It only affects guarding opponents, causing a 5 second breakable stun that ends early if the stunned player is hit.
 - In-game action transitions and hit, guard, parry, clash, kick, and dust effects trigger matching procedural sound effects.
 - In-game action and impact sounds are boosted 1.5x above the shared Settings volume so combat reads more clearly than menu ambience.
 - `WeaponPoseSystem` calculates fixed-length weapon pose data shared by character posing, weapon rendering, and hit detection.
@@ -188,7 +191,11 @@ The rank write/delete rules are intentionally permissive for the MVP because sco
 
 The game intentionally keeps the characters as simple rigid parts: head, torso, two arms, and two legs. There are no elbow or knee joints. Mouse aim drives the weapon angle with weapon-specific follow speed so the weapon feels weighted without hiding the true hit shape.
 
-Left click starts a fixed attack sequence: charge, attack, recovery, then idle. Holding left click does not hold charge. Feint is only valid during the short charge window before the attack becomes active.
+Left click starts a fixed attack sequence: charge, attack, recovery, then idle. Holding left click does not hold charge. Feint is only valid during the short charge window before the attack becomes active, and a successful feint returns directly to idle so the player can act again immediately.
+
+Guard break is not a universal damage tool. The move reverses the weapon posture and drives the grip or shaft end forward; its `strikeZone` is the same handle segment drawn by the renderer. If it connects against a guarding opponent, it causes a 5 second stun that is cancelled immediately by the next incoming hit. If the opponent is not guarding, the move has no combat effect beyond its stamina cost and recovery.
+
+Parry is an active counter, not only a block. If the defender's visible parry weapon intersects the incoming attack sweep during the parry window, the attacker takes 1.5x the defender weapon damage and their attack is interrupted.
 
 Mouse distance does not change weapon length. The mouse only defines the target direction. `WeaponPoseSystem` normalizes the hand-to-mouse direction and applies the weapon's fixed `length`, so the rendered weapon and its hit data stay the same size at any mouse distance. Longsword uses the blade as its strike zone, spear emphasizes the spearhead, and axe emphasizes the axe head.
 

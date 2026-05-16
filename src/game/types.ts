@@ -124,6 +124,7 @@ export interface CorePlayerSnapshot {
   stamina: number;
   action: ActionState;
   actionTime: number;
+  stunBreaksOnHit: boolean;
   weaponType: WeaponType;
   weaponAngle: number;
 }

@@ -53,7 +53,10 @@ export class WeaponPoseSystem {
     };
     const guardSegment = this.guardSegment(player, handPosition, normal);
     const headSegment = this.headSegment(player, tipPosition, direction, normal);
-    const strikeZone = this.strikeZone(player, bladeSegment, direction, headSegment);
+    const strikeZone =
+      player.action === "guardBreak"
+        ? this.guardBreakStrikeZone(gripPosition, direction, normal)
+        : this.strikeZone(player, bladeSegment, direction, headSegment);
     const previous = player.previousWeapon;
 
     return {
@@ -121,8 +124,8 @@ export class WeaponPoseSystem {
     if (player.action === "guardBreak") {
       const t = smoothstep(clamp(player.actionTime / GUARD_BREAK_ACTIVE_END, 0, 1));
       return {
-        angle: player.weaponAngle,
-        handOffset: { x: lerp(16, 48, t), y: lerp(-116, -108, t) },
+        angle: lerpAngle(player.weaponAngle, Math.PI - 0.18, t),
+        handOffset: { x: lerp(14, 64, t), y: lerp(-116, -108, t) },
       };
     }
     if (player.action === "stunned") {
@@ -376,6 +379,28 @@ export class WeaponPoseSystem {
       return headSegment;
     }
     return bladeSegment;
+  }
+
+  private static guardBreakStrikeZone(
+    gripPosition: Vec2,
+    direction: Vec2,
+    normal: Vec2,
+  ): Segment {
+    const capCenter = {
+      x: gripPosition.x - direction.x * 5,
+      y: gripPosition.y - direction.y * 5,
+    };
+    return {
+      start: {
+        x: capCenter.x - normal.x * 11,
+        y: capCenter.y - normal.y * 11,
+      },
+      end: {
+        x: capCenter.x + normal.x * 11,
+        y: capCenter.y + normal.y * 11,
+      },
+      radius: 8,
+    };
   }
 
   private static shaftRadius(player: PlayerState): number {

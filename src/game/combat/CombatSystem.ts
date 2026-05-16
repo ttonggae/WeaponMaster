@@ -4,14 +4,11 @@ import {
   ATTACK_MOVE_MULTIPLIER,
   CHARGE_MOVE_MULTIPLIER,
   DEFAULT_HITSTOP_SECONDS,
-  FEINT_SECONDS,
   FEINT_STAMINA_COST,
-  GUARD_BREAK_DAMAGE,
   GUARD_BREAK_GUARD_STUN_SECONDS,
   GUARD_BREAK_KNOCKBACK,
   GUARD_BREAK_SECONDS,
   GUARD_BREAK_STAMINA_COST,
-  GUARD_BREAK_STUN_SECONDS,
   GUARD_MOVE_MULTIPLIER,
   HEAVY_HITSTOP_SECONDS,
   KICK_ACTIVE_END,
@@ -24,6 +21,7 @@ import {
   KICK_STUN_SECONDS,
   MIN_PLAYER_DISTANCE,
   MOVE_SPEED,
+  PARRY_DAMAGE_MULTIPLIER,
   PARRY_STAMINA_COST,
   PARRY_TOTAL_SECONDS,
   STUNNED_MOVE_MULTIPLIER,
@@ -111,6 +109,7 @@ export class CombatSystem {
 
     if (player.action === "stunned") {
       if (player.actionTime >= player.stunnedSeconds) {
+        player.stunBreaksOnHit = false;
         player.setAction("idle");
       }
       return;
@@ -119,13 +118,6 @@ export class CombatSystem {
     if (player.action === "recovery") {
       if (player.actionTime >= player.recoverySeconds) {
         player.setAction("idle");
-      }
-      return;
-    }
-
-    if (player.action === "feint") {
-      if (player.actionTime >= FEINT_SECONDS) {
-        this.beginRecovery(player, 0.12);
       }
       return;
     }
@@ -360,7 +352,9 @@ export class CombatSystem {
       this.makeWinded(state, player, 0.28);
       return;
     }
-    player.setAction("feint");
+    player.attackCharge = 0;
+    player.attackHasHit = false;
+    player.setAction("idle");
   }
 
   private tryBeginParry(state: DuelState, player: PlayerState): void {
@@ -432,7 +426,10 @@ export class CombatSystem {
     const weaponContact = this.hitboxes.weaponSweepIntersectsWeapon(attacker, defender);
 
     if (this.parry.canParry(defender) && weaponContact.hit) {
+      const parryWeapon = getWeaponData(defender.weaponType);
+      const parryDamage = parryWeapon.damage * PARRY_DAMAGE_MULTIPLIER;
       attacker.attackHasHit = true;
+      attacker.health = clamp(attacker.health - parryDamage, 0, 100);
       attacker.stunnedSeconds = 0.48;
       attacker.setAction("stunned");
       defender.counterWindow = 0.55;
@@ -441,6 +438,10 @@ export class CombatSystem {
       }
       state.addEffect("parry", weaponContact.point, 2.5, {
         x: -attacker.facing * 36,
+        y: -18,
+      });
+      state.addEffect("hit", weaponContact.point, parryDamage > 28 ? 2.6 : 2.1, {
+        x: -attacker.facing * 24,
         y: -18,
       });
       state.addImpact(HEAVY_HITSTOP_SECONDS, 6);
@@ -467,8 +468,7 @@ export class CombatSystem {
     attacker.attackHasHit = true;
     const damage = weapon.damage * (1 + attacker.attackCharge * 0.16);
     defender.health = clamp(defender.health - damage, 0, 100);
-    defender.stunnedSeconds = weapon.stun;
-    defender.setAction("stunned");
+    this.applyHitStun(defender, weapon.stun);
     defender.x += attacker.facing * weapon.knockback;
     if (weapon.special === "axeGuardSlow") {
       defender.slowTimer = Math.max(defender.slowTimer, 0.45);
@@ -502,22 +502,17 @@ export class CombatSystem {
 
     attacker.guardBreakHasHit = true;
     const point = weaponContact.hit ? weaponContact.point : bodyHit.point;
-    if (defender.action === "guard") {
-      defender.stamina = clamp(defender.stamina - 26, 0, 100);
-      defender.stunnedSeconds = GUARD_BREAK_GUARD_STUN_SECONDS;
-      defender.setAction("stunned");
-      defender.x += attacker.facing * GUARD_BREAK_KNOCKBACK;
-      state.addEffect("guard", point, 2.7, { x: attacker.facing * 24, y: -14 });
-      state.addImpact(HEAVY_HITSTOP_SECONDS, 6.5);
+    if (defender.action !== "guard") {
       return;
     }
 
-    defender.health = clamp(defender.health - GUARD_BREAK_DAMAGE, 0, 100);
-    defender.stunnedSeconds = GUARD_BREAK_STUN_SECONDS;
+    defender.stamina = clamp(defender.stamina - 26, 0, 100);
+    defender.stunnedSeconds = GUARD_BREAK_GUARD_STUN_SECONDS;
+    defender.stunBreaksOnHit = true;
     defender.setAction("stunned");
-    defender.x += attacker.facing * (GUARD_BREAK_KNOCKBACK * 0.55);
-    state.addEffect("hit", point, 1.3, { x: attacker.facing * 18, y: -12 });
-    state.addImpact(DEFAULT_HITSTOP_SECONDS, 3.5);
+    defender.x += attacker.facing * GUARD_BREAK_KNOCKBACK;
+    state.addEffect("guard", point, 2.7, { x: attacker.facing * 24, y: -14 });
+    state.addImpact(HEAVY_HITSTOP_SECONDS, 6.5);
   }
 
   private resolveKick(state: DuelState, attacker: PlayerState, defender: PlayerState): void {
@@ -544,8 +539,7 @@ export class CombatSystem {
     const guarded = defender.action === "guard";
     defender.health = clamp(defender.health - (guarded ? 1 : KICK_DAMAGE), 0, 100);
     defender.x += attacker.facing * (guarded ? KICK_KNOCKBACK * 0.62 : KICK_KNOCKBACK);
-    defender.stunnedSeconds = KICK_STUN_SECONDS;
-    defender.setAction("stunned");
+    this.applyHitStun(defender, KICK_STUN_SECONDS);
     state.addEffect("kick", segmentMidpoint(kickHitbox), guarded ? 1.2 : 1.8, {
       x: attacker.facing * 30,
       y: -10,
@@ -579,5 +573,17 @@ export class CombatSystem {
     } else if (state.players.p2.health <= 0) {
       state.winner = "p1";
     }
+  }
+
+  private applyHitStun(defender: PlayerState, stunSeconds: number): void {
+    if (defender.stunBreaksOnHit) {
+      defender.stunBreaksOnHit = false;
+      defender.stunnedSeconds = 0;
+      defender.setAction("idle");
+      return;
+    }
+
+    defender.stunnedSeconds = stunSeconds;
+    defender.setAction("stunned");
   }
 }

@@ -95,9 +95,10 @@ Manual checks:
 - Weapon damage is active only during the attack active window.
 - Weapon sweep uses previous-frame and current-frame weapon positions.
 - Guard succeeds when the incoming attack sweep intersects the defender's visible guarding weapon.
-- Parry succeeds only during the short parry window when the incoming attack sweep intersects the defender's visible parry weapon.
-- Feint is allowed only during attack charge.
-- Guard break is slow and stamina-heavy, and is strongest against a guarding opponent.
+- Parry succeeds only during the short parry window when the incoming attack sweep intersects the defender's visible parry weapon, then counters for 1.5x defender weapon damage.
+- Feint is allowed only during attack charge and must return directly to idle with smooth pose blending and no recovery lockout.
+- Guard break uses the visible weapon grip/shaft strike zone, only affects guarding opponents, and applies a 5 second breakable stun.
+- Guard break stun must clear immediately when the stunned player is hit by an attack.
 - Kick is primarily a spacing/knockback action, not a high-damage tool.
 - Kick hit detection must use the rendered extended leg/foot position, not torso center distance.
 

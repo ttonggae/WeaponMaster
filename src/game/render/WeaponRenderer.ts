@@ -14,6 +14,8 @@ export class WeaponRenderer {
       this.drawLongsword(ctx, pose);
     }
 
+    this.drawButtStrike(ctx, pose);
+
     if (pose.guardActive || pose.parryActive) {
       ctx.strokeStyle = pose.parryActive
         ? "rgba(216, 199, 135, 0.58)"
@@ -26,6 +28,32 @@ export class WeaponRenderer {
     }
 
     ctx.restore();
+  }
+
+  private static drawButtStrike(ctx: CanvasRenderingContext2D, pose: WeaponPose): void {
+    if (!pose.active) {
+      return;
+    }
+
+    const center = {
+      x: (pose.strikeZone.start.x + pose.strikeZone.end.x) / 2,
+      y: (pose.strikeZone.start.y + pose.strikeZone.end.y) / 2,
+    };
+    if (Math.hypot(center.x - pose.gripPosition.x, center.y - pose.gripPosition.y) > 34) {
+      return;
+    }
+
+    ctx.strokeStyle = "rgba(211, 162, 82, 0.82)";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(pose.strikeZone.start.x, pose.strikeZone.start.y);
+    ctx.lineTo(pose.strikeZone.end.x, pose.strikeZone.end.y);
+    ctx.stroke();
+
+    ctx.fillStyle = "#2d2419";
+    ctx.beginPath();
+    ctx.arc(center.x, center.y, 5, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   private static drawLongsword(ctx: CanvasRenderingContext2D, pose: WeaponPose): void {

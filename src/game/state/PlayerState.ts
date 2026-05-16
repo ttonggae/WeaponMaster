@@ -33,6 +33,7 @@ export class PlayerState {
   attackHasHit = false;
   kickHasHit = false;
   guardBreakHasHit = false;
+  stunBreaksOnHit = false;
   stunnedSeconds = 0;
   recoverySeconds = 0;
   counterWindow = 0;
@@ -69,6 +70,7 @@ export class PlayerState {
     this.attackHasHit = false;
     this.kickHasHit = false;
     this.guardBreakHasHit = false;
+    this.stunBreaksOnHit = false;
     this.stunnedSeconds = 0;
     this.recoverySeconds = 0;
     this.counterWindow = 0;
@@ -92,6 +94,7 @@ export class PlayerState {
       stamina: Math.round(this.stamina * 10) / 10,
       action: this.action,
       actionTime: Math.round(this.actionTime * 100) / 100,
+      stunBreaksOnHit: this.stunBreaksOnHit,
       weaponType: this.weaponType,
       weaponAngle: Math.round(this.weaponAngle * 100) / 100,
     };
