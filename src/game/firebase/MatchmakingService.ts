@@ -18,7 +18,7 @@ import { SignalingService } from "./SignalingService";
 
 const QUEUE_TTL_MS = 2 * 60 * 1000;
 const ROOM_TTL_MS = 10 * 60 * 1000;
-const MATCH_SEARCH_LIMIT = 16;
+const MATCH_SEARCH_LIMIT = 32;
 const STALE_MATCH_ERROR = "MATCH_QUEUE_STALE";
 
 export class MatchmakingService {
@@ -84,7 +84,15 @@ export class MatchmakingService {
           !ownSnapshot.exists() ||
           !opponentSnapshot.exists() ||
           ownSnapshot.data().status !== "waiting" ||
-          opponentSnapshot.data().status !== "waiting"
+          opponentSnapshot.data().status !== "waiting" ||
+          ownSnapshot.data().sessionId !== this.sessionId ||
+          ownSnapshot.data().playerId !== playerId ||
+          ownSnapshot.data().matchType !== matchType ||
+          Number(ownSnapshot.data().expiresAt ?? 0) <= now ||
+          opponentSnapshot.data().sessionId === this.sessionId ||
+          opponentSnapshot.data().playerId === playerId ||
+          opponentSnapshot.data().matchType !== matchType ||
+          Number(opponentSnapshot.data().expiresAt ?? 0) <= now
         ) {
           throw new Error(STALE_MATCH_ERROR);
         }
@@ -141,7 +149,8 @@ export class MatchmakingService {
         room.expiresAt <= Date.now() ||
         room.status === "closed" ||
         room.status === "expired" ||
-        room.matchType !== matchType
+        room.matchType !== matchType ||
+        !this.belongsToCurrentSession(room, playerId)
       ) {
         return;
       }
@@ -156,6 +165,13 @@ export class MatchmakingService {
       }, onError),
     ];
     return () => unsubs.forEach((unsub) => unsub());
+  }
+
+  private belongsToCurrentSession(room: SignalingRoom, playerId: string): boolean {
+    if (room.hostSessionId || room.guestSessionId) {
+      return room.hostSessionId === this.sessionId || room.guestSessionId === this.sessionId;
+    }
+    return room.hostId === playerId || room.guestId === playerId;
   }
 
   private async cleanupOldQueueEntries(): Promise<void> {

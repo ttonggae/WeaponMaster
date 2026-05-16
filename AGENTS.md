@@ -57,6 +57,7 @@ Manual checks:
 - In-game action changes and impact effects produce matching procedural sound effects.
 - Ranked/Casual immediately start matchmaking and show the centered matchmaking overlay.
 - Matchmaking cancel must only be available while actively searching, not after a room has been accepted.
+- Matchmaking must ignore stale rooms from older sessions and clean up failed P2P handshakes.
 - Friendly Match opens only the 6-character room-code panel.
 - Google sign-in starts when entering an online mode.
 - Season Top 10 renders when Firebase/Firestore rules are configured.
@@ -111,6 +112,8 @@ Manual checks:
 - Each peer simulates from local and remote input snapshots.
 - Peers exchange periodic checksums and compact core-state snapshots.
 - Large drift may be corrected for the remote-controlled player.
+- Queue watchers and signaling watchers should stay separate so accepting a room cannot trigger repeated match handling.
+- WebRTC ICE candidates may arrive before SDP remote descriptions; queue them instead of dropping them.
 - Perfect cheat prevention is not possible in this architecture; keep validation and checksums explicit so future server authority, Cloud Functions validation, or rollback can be added.
 
 ## Ranking Rules

@@ -96,6 +96,7 @@ Rank writes are client-side in this MVP, so they are not cheat-proof. The rank s
 - Friendly room code UI opens in the center of the screen.
 - Matchmaking UI is hidden once WebRTC connects and the duel begins.
 - The matchmaking cancel action is removed as soon as an opponent is accepted and the duel scene starts.
+- Matchmaking ignores stale rooms from older browser sessions, separates queue watchers from signaling watchers, and times out failed P2P handshakes so old rooms are cleaned up.
 - Current player score and Season Top 10 leaderboard are shown on the main menu when Firebase is configured.
 - Google sign-in replaces anonymous auth to avoid confusing player identity.
 - Wide arena with a smooth player-focused camera and separated world/screen coordinates.
@@ -192,6 +193,7 @@ Left click starts a fixed attack sequence: charge, attack, recovery, then idle. 
 Mouse distance does not change weapon length. The mouse only defines the target direction. `WeaponPoseSystem` normalizes the hand-to-mouse direction and applies the weapon's fixed `length`, so the rendered weapon and its hit data stay the same size at any mouse distance. Longsword uses the blade as its strike zone, spear emphasizes the spearhead, and axe emphasizes the axe head.
 
 The first networking version is not server-authoritative. Both clients simulate from exchanged inputs and send periodic core-state snapshots for drift checks. This cannot fully prevent cheating, but the code keeps state comparison and correction isolated so later server authority or rollback can be added without rewriting core combat.
+Online matching uses the per-browser session id stored in queue and room documents to avoid accepting stale rooms from previous tabs or reloads. ICE candidates are queued until each peer has a remote description, because Firebase snapshot timing can deliver candidates before the SDP step completes.
 
 Audio is generated through Web Audio rather than external files. Browsers block autoplay before a user gesture, so sound starts after the first click/key press. Menu audio stops whenever the main menu is hidden. In-game audio also listens to action state changes, so swings, guard posture, parry, kick, and guard break have cues even before a hit occurs.
 The bottom-left Settings panel stores sound volume locally. The slider is tuned so the default 50% setting is the louder baseline requested for current testing, while 100% leaves headroom for noisy environments. Combat cues apply an additional 1.5x layer over that shared volume; menu ambience does not.
@@ -220,9 +222,10 @@ Browser checks:
 12. Connect two browser sessions through ranked/casual matchmaking or friendly room code.
 13. Confirm the matchmaking cancel button disappears once an opponent is accepted and the duel scene starts.
 14. Confirm the connection panel/overlay hides after WebRTC connects.
-15. Confirm Google auth creates a 1000 point score for a new player and shows it in the menu.
-16. Finish a ranked duel and confirm the personal score and Season Top 10 can update.
-17. Verify attack, guard, parry, guard break, kick, hit, guard, and clash events produce audible in-game cues.
+15. If P2P cannot connect, confirm the app returns to the menu with a connection failure message instead of leaving a stale room.
+16. Confirm Google auth creates a 1000 point score for a new player and shows it in the menu.
+17. Finish a ranked duel and confirm the personal score and Season Top 10 can update.
+18. Verify attack, guard, parry, guard break, kick, hit, guard, and clash events produce audible in-game cues.
 
 ## Future Structure
 

@@ -16,6 +16,7 @@ export class P2PClient {
   private messageHandler: MessageHandler | null = null;
   private statusHandler: StatusHandler | null = null;
   private iceCandidateHandler: IceCandidateHandler | null = null;
+  private readonly pendingRemoteCandidates: RTCIceCandidateInit[] = [];
 
   onMessage(handler: MessageHandler): void {
     this.messageHandler = handler;
@@ -46,11 +47,12 @@ export class P2PClient {
   }
 
   async createAnswerFromOffer(offerText: string): Promise<string> {
-    this.close();
+    this.close(false);
     this.setStatus("creating-answer");
     const peer = this.createPeer();
     const offer = JSON.parse(offerText) as RTCSessionDescriptionInit;
     await peer.setRemoteDescription(offer);
+    await this.flushPendingRemoteCandidates();
     const answer = await peer.createAnswer();
     await peer.setLocalDescription(answer);
     await this.waitForIce(peer);
@@ -64,14 +66,24 @@ export class P2PClient {
     }
     const answer = JSON.parse(answerText) as RTCSessionDescriptionInit;
     await this.peer.setRemoteDescription(answer);
+    await this.flushPendingRemoteCandidates();
     this.setStatus("connecting");
   }
 
   async addIceCandidate(candidate: RTCIceCandidateInit): Promise<void> {
     if (!this.peer) {
+      this.pendingRemoteCandidates.push(candidate);
       return;
     }
-    await this.peer.addIceCandidate(candidate);
+    if (!this.peer.remoteDescription) {
+      this.pendingRemoteCandidates.push(candidate);
+      return;
+    }
+    try {
+      await this.peer.addIceCandidate(candidate);
+    } catch {
+      this.pendingRemoteCandidates.push(candidate);
+    }
   }
 
   send(message: NetMessage): boolean {
@@ -82,7 +94,7 @@ export class P2PClient {
     return true;
   }
 
-  close(): void {
+  close(clearPendingCandidates = true): void {
     if (this.channel) {
       this.channel.close();
     }
@@ -91,6 +103,9 @@ export class P2PClient {
     }
     this.channel = null;
     this.peer = null;
+    if (clearPendingCandidates) {
+      this.pendingRemoteCandidates.length = 0;
+    }
   }
 
   private createPeer(): RTCPeerConnection {
@@ -157,6 +172,21 @@ export class P2PClient {
       };
       peer.addEventListener("icegatheringstatechange", check);
     });
+  }
+
+  private async flushPendingRemoteCandidates(): Promise<void> {
+    if (!this.peer || !this.peer.remoteDescription) {
+      return;
+    }
+
+    const candidates = this.pendingRemoteCandidates.splice(0);
+    for (const candidate of candidates) {
+      try {
+        await this.peer.addIceCandidate(candidate);
+      } catch {
+        // Ignore invalid duplicate/stale candidates; the SDP usually still has enough ICE data.
+      }
+    }
   }
 
   private setStatus(status: ConnectionStatus, detail?: string): void {
