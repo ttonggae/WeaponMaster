@@ -10,7 +10,7 @@ export type ActionState =
   | "kick"
   | "guardBreak"
   | "stunned";
-export type WeaponType = "longsword" | "spear" | "axe";
+export type WeaponType = "longsword" | "spear" | "axe" | "zweihander";
 export type MatchType = "ranked" | "casual" | "friendly";
 export type AttackVariant = "overhead" | "thrust" | "upswing" | "chop";
 export type DuelMode = "menu" | "p2p";

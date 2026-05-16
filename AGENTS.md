@@ -19,6 +19,7 @@
 - `src/game/net/`: WebRTC DataChannel, message types, signaling types, and state sync.
 - `src/game/firebase/`: Firebase app init, Google auth, matchmaking, friendly rooms, signaling, room codes, and rank service.
 - `src/game/ui/`: DOM menu, weapon selection, friendly room panel, and matchmaking overlay.
+- `src/game/i18n/`: English/Korean UI text, action labels, weapon labels, and local language persistence.
 
 ## Run Commands
 
@@ -53,6 +54,7 @@ Manual checks:
 - UI text must wrap or truncate inside panels/buttons instead of spilling outside boxes.
 - Menu audio uses short forge crackle/hammer events without a continuous drone.
 - Bottom-left Settings controls global sound volume, with 50% mapped to three times the original MVP output.
+- Bottom-left Settings controls English/Korean language mode and must persist the choice locally.
 - In-game action and impact sounds apply an extra 1.5x multiplier over the shared Settings volume.
 - In-game action changes and impact effects produce matching procedural sound effects.
 - Ranked/Casual immediately start matchmaking and show the centered matchmaking overlay.
@@ -64,7 +66,7 @@ Manual checks:
 - The local player's stored score starts at 1000 and is visible after Google auth.
 - Matchmaking UI and friendly panel hide after WebRTC connects.
 - Both fighters are visible after connection.
-- Longsword, spear, and axe can be selected for the local player.
+- Longsword, spear, axe, and zweihander can be selected for the local player.
 - The arena is wider than the viewport and the camera follows the local player smoothly.
 - Mouse aim remains accurate after the camera moves.
 - Health and stamina change correctly.
@@ -83,6 +85,7 @@ Manual checks:
 - Do not add external audio assets for menu ambience unless explicitly requested.
 - Do not use a continuous menu oscillator that creates a steady buzzing tone.
 - Do not bypass the shared `GameAudio` master volume path for new sounds.
+- Do not hardcode new user-facing UI text directly in menus/HUD when it belongs in `src/game/i18n/Localization.ts`.
 - Keep characters as head, torso, left/right arm, and left/right leg only. No elbow or knee joint model.
 
 ## Combat Hit Rules
@@ -97,7 +100,7 @@ Manual checks:
 - Guard succeeds when the incoming attack sweep intersects the defender's visible guarding weapon.
 - Parry succeeds only during the short parry window when the incoming attack sweep intersects the defender's visible parry weapon, then counters for 1.5x defender weapon damage.
 - Feint is allowed only during attack charge and must return directly to idle with smooth pose blending and no recovery lockout.
-- Guard break uses the visible weapon grip/shaft strike zone, only affects guarding opponents, and applies a 5 second breakable stun.
+- Guard break uses the visible weapon grip/shaft strike zone, only affects guarding opponents, applies a 5 second breakable stun, and should start quickly enough to be usable while still being readable.
 - Guard break stun must clear immediately when the stunned player is hit by an attack.
 - Kick is primarily a spacing/knockback action, not a high-damage tool.
 - Kick hit detection must use the rendered extended leg/foot position, not torso center distance.
@@ -152,13 +155,14 @@ Manual checks:
 - Loadout supports weapon category item selection and locked future categories with stats/descriptions/equip button state.
 - UI text stays inside its panels/buttons across desktop and mobile widths.
 - Bottom-left Settings panel can adjust stored global sound volume.
+- Bottom-left Settings panel can switch English/Korean UI language.
 - In-game action, hit, guard, parry, clash, kick, and dust effects have procedural sound cues.
 - Ranked/Casual matchmaking overlay appears in the center immediately after click.
 - Friendly room code create/join works.
 - Two characters render after connection.
 - Wide arena and smooth camera are active.
 - Only the local player's weapon selection is exposed in the menu.
-- Longsword, spear, and axe work.
+- Longsword, spear, axe, and zweihander work.
 - Mouse-driven weapon posture is visible and responsive.
 - Health and stamina work.
 - Attack, guard, parry, feint, guard break, guard impact, and kick work.

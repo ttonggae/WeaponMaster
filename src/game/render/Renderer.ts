@@ -1,6 +1,7 @@
 import { GROUND_Y, LOGICAL_HEIGHT, LOGICAL_WIDTH } from "../constants";
 import { DEFAULT_ARENA } from "../arena/ArenaData";
 import { CameraSystem } from "../camera/CameraSystem";
+import type { Language } from "../i18n/Localization";
 import type { DuelState } from "../state/DuelState";
 import type { PlayerId } from "../types";
 import { CharacterRenderer } from "./CharacterRenderer";
@@ -17,6 +18,7 @@ export class Renderer {
   private offsetX = 0;
   private offsetY = 0;
   private readonly camera = new CameraSystem();
+  private language: Language = "en";
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     const ctx = canvas.getContext("2d");
@@ -52,12 +54,16 @@ export class Renderer {
       this.drawArena(ctx);
       this.drawDuel(ctx, state);
       ctx.restore();
-      UIRenderer.draw(ctx, state);
+      UIRenderer.draw(ctx, state, this.language);
     } else {
       this.drawForgeBackdrop(ctx, state.time);
     }
 
     ctx.restore();
+  }
+
+  setLanguage(language: Language): void {
+    this.language = language;
   }
 
   screenToWorld(clientX: number, clientY: number): { x: number; y: number } {

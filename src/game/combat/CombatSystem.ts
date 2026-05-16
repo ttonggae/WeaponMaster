@@ -138,7 +138,7 @@ export class CombatSystem {
 
     if (player.action === "guardBreak") {
       if (player.actionTime >= GUARD_BREAK_SECONDS) {
-        this.beginRecovery(player, 0.32);
+        this.beginRecovery(player, 0.22);
       }
       return;
     }
@@ -257,16 +257,16 @@ export class CombatSystem {
   private targetLean(player: PlayerState): number {
     if (player.action === "attack") {
       const t = Math.sin(Math.min(1, player.actionTime / 0.22) * Math.PI);
-      return player.facing * (8 + t * (player.weaponType === "spear" ? 10 : 5));
+      return player.facing * (8 + t * (player.weaponType === "spear" ? 10 : player.weaponType === "zweihander" ? 7 : 5));
     }
     if (player.action === "charge") {
       const chargeTime =
-        player.weaponType === "axe" ? 0.46 : player.weaponType === "spear" ? 0.34 : 0.28;
+        player.weaponType === "axe" ? 0.46 : player.weaponType === "spear" ? 0.34 : player.weaponType === "zweihander" ? 0.38 : 0.28;
       const t = Math.min(1, player.actionTime / chargeTime);
-      return -player.facing * (player.weaponType === "axe" ? 10 : 6) * t;
+      return -player.facing * (player.weaponType === "axe" ? 10 : player.weaponType === "zweihander" ? 8 : 6) * t;
     }
     if (player.action === "recovery") {
-      return -player.facing * (player.weaponType === "axe" ? 9 : 5);
+      return -player.facing * (player.weaponType === "axe" ? 9 : player.weaponType === "zweihander" ? 7 : 5);
     }
     if (player.action === "guard" || player.action === "parry") {
       return -player.facing * (player.action === "parry" ? 1 : 4);
@@ -322,6 +322,15 @@ export class CombatSystem {
     }
     if (player.weaponType === "axe") {
       return player.weaponAngle < -0.18 ? "chop" : player.weaponAngle > 0.28 ? "upswing" : "chop";
+    }
+    if (player.weaponType === "zweihander") {
+      if (player.weaponAngle < -0.26) {
+        return "overhead";
+      }
+      if (player.weaponAngle > 0.24) {
+        return "upswing";
+      }
+      return "thrust";
     }
     if (player.weaponAngle < -0.32) {
       return "overhead";

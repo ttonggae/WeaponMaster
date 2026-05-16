@@ -56,6 +56,7 @@ Firebase console also needs the deployed domain in `Authentication > Settings > 
 - Feint during charge: `Q`
 - Kick: `F`
 - Guard break: `E`
+- Language: bottom-left Settings panel, English/Korean toggle
 
 ## Game Modes
 
@@ -87,7 +88,7 @@ Rank writes are client-side in this MVP, so they are not cheat-proof. The rank s
 - Main menu displays the active season number and concept name.
 - Main menu canvas background is a procedural forge with furnace glow, anvil, tools, and sparks.
 - Main menu sound uses short Web Audio crackles and hammer strikes after the first browser input gesture.
-- Sound volume is controlled from the bottom-left Settings panel; 50% equals three times the original MVP output.
+- Sound volume and English/Korean language mode are controlled from the bottom-left Settings panel; 50% volume equals three times the original MVP output.
 - Main menu places the title/season at top-left, Season Top 10 plus personal score at top-right, and match controls at bottom-center.
 - Loadout opens from a button above match controls and shows a centered equipment box with four columns: character/stats, equipment category, item selection, and selected item details/equip action.
 - Loadout currently supports weapon selection; usable gear, armor, and passive categories are visible but locked for future updates.
@@ -100,11 +101,11 @@ Rank writes are client-side in this MVP, so they are not cheat-proof. The rank s
 - Current player score and Season Top 10 leaderboard are shown on the main menu when Firebase is configured.
 - Google sign-in replaces anonymous auth to avoid confusing player identity.
 - Wide arena with a smooth player-focused camera and separated world/screen coordinates.
-- Longsword, spear, and axe weapon data with mouse-driven weapon posture.
+- Longsword, spear, axe, and zweihander weapon data with mouse-driven weapon posture.
 - Health, stamina, charge, attack, guard, parry, feint, kick, stun, hitstop, camera shake, and impact effects.
 - Parry counters an incoming attack for 1.5x the defender weapon damage.
 - Feint cancels charge directly back to idle, with pose blending but no recovery lockout.
-- Guard break uses the weapon grip/shaft as its visible strike data. It only affects guarding opponents, causing a 5 second breakable stun that ends early if the stunned player is hit.
+- Guard break uses the weapon grip/shaft as its visible strike data. It is faster than the first MVP version, but still only affects guarding opponents, causing a 5 second breakable stun that ends early if the stunned player is hit.
 - In-game action transitions and hit, guard, parry, clash, kick, and dust effects trigger matching procedural sound effects.
 - In-game action and impact sounds are boosted 1.5x above the shared Settings volume so combat reads more clearly than menu ambience.
 - `WeaponPoseSystem` calculates fixed-length weapon pose data shared by character posing, weapon rendering, and hit detection.
@@ -193,11 +194,13 @@ The game intentionally keeps the characters as simple rigid parts: head, torso, 
 
 Left click starts a fixed attack sequence: charge, attack, recovery, then idle. Holding left click does not hold charge. Feint is only valid during the short charge window before the attack becomes active, and a successful feint returns directly to idle so the player can act again immediately.
 
-Guard break is not a universal damage tool. The move reverses the weapon posture and drives the grip or shaft end forward; its `strikeZone` is the same handle segment drawn by the renderer. If it connects against a guarding opponent, it causes a 5 second stun that is cancelled immediately by the next incoming hit. If the opponent is not guarding, the move has no combat effect beyond its stamina cost and recovery.
+Guard break is not a universal damage tool. The move reverses the weapon posture and drives the grip or shaft end forward; its `strikeZone` is the same handle segment drawn by the renderer. It now starts faster than the first MVP version, but if it connects against a guarding opponent, it causes a 5 second stun that is cancelled immediately by the next incoming hit. If the opponent is not guarding, the move has no combat effect beyond its stamina cost and recovery.
 
 Parry is an active counter, not only a block. If the defender's visible parry weapon intersects the incoming attack sweep during the parry window, the attacker takes 1.5x the defender weapon damage and their attack is interrupted.
 
-Mouse distance does not change weapon length. The mouse only defines the target direction. `WeaponPoseSystem` normalizes the hand-to-mouse direction and applies the weapon's fixed `length`, so the rendered weapon and its hit data stay the same size at any mouse distance. Longsword uses the blade as its strike zone, spear emphasizes the spearhead, and axe emphasizes the axe head.
+Mouse distance does not change weapon length. The mouse only defines the target direction. `WeaponPoseSystem` normalizes the hand-to-mouse direction and applies the weapon's fixed `length`, so the rendered weapon and its hit data stay the same size at any mouse distance. Longsword and zweihander use the blade as their strike zone, spear emphasizes the spearhead, and axe emphasizes the axe head.
+
+The Settings language toggle is client-local and stored in browser storage. It switches the menu, loadout, matchmaking overlay, friendly room panel, and in-game HUD between English and Korean without changing network data.
 
 The first networking version is not server-authoritative. Both clients simulate from exchanged inputs and send periodic core-state snapshots for drift checks. This cannot fully prevent cheating, but the code keeps state comparison and correction isolated so later server authority or rollback can be added without rewriting core combat.
 Online matching uses the per-browser session id stored in queue and room documents to avoid accepting stale rooms from previous tabs or reloads. Matching is session-based instead of blocking same Google account ids, which keeps two local test windows from waiting forever. The queue query still checks 16 candidates, but it filters by match type in Firestore first so those 16 are relevant to the selected mode. ICE candidates are queued until each peer has a remote description, because Firebase snapshot timing can deliver candidates before the SDP step completes.
@@ -219,11 +222,11 @@ Browser checks:
 2. Confirm the menu shows `Season 1: Test Season` over the forge background.
 3. Confirm title/season are top-left, Top 10 plus personal score are top-right, and match controls are bottom-center.
 4. Open Loadout and confirm the columns read left-to-right as character/stats, equipment category, selected category item choices, and selected item details/equip action.
-5. Select Weapon, then Longsword/Spear/Axe, and confirm the character weapon preview and stats update before pressing Equip.
+5. Select Weapon, then Longsword/Spear/Axe/Zweihander, and confirm the character weapon preview and stats update before pressing Equip.
 6. Click locked usable gear/armor/passive categories and confirm they show descriptions and a disabled Locked button.
 7. Resize the browser and confirm UI text stays inside its panels/buttons.
 8. Click once on the page and confirm forge crackle/hammer sound plays only while the main menu is visible, without a steady buzz.
-9. Open the bottom-left Settings panel and confirm the Sound slider changes menu and combat volume.
+9. Open the bottom-left Settings panel and confirm the Sound slider changes menu/combat volume and the language toggle switches English/Korean UI text.
 10. Press Ranked or Casual and confirm the centered matchmaking overlay appears immediately.
 11. Press Friendly and confirm the room-code panel appears centered.
 12. Connect two browser sessions through ranked/casual matchmaking or friendly room code.

@@ -46,9 +46,9 @@ export const KICK_DAMAGE = 3;
 export const KICK_KNOCKBACK = 58;
 export const KICK_STUN_SECONDS = 0.3;
 
-export const GUARD_BREAK_SECONDS = 0.72;
-export const GUARD_BREAK_ACTIVE_START = 0.34;
-export const GUARD_BREAK_ACTIVE_END = 0.47;
+export const GUARD_BREAK_SECONDS = 0.52;
+export const GUARD_BREAK_ACTIVE_START = 0.22;
+export const GUARD_BREAK_ACTIVE_END = 0.34;
 export const GUARD_BREAK_STAMINA_COST = 30;
 export const GUARD_BREAK_GUARD_STUN_SECONDS = 5;
 export const GUARD_BREAK_KNOCKBACK = 34;

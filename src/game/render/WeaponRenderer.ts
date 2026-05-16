@@ -10,6 +10,8 @@ export class WeaponRenderer {
       this.drawSpear(ctx, pose);
     } else if (pose.weaponType === "axe") {
       this.drawAxe(ctx, pose);
+    } else if (pose.weaponType === "zweihander") {
+      this.drawZweihander(ctx, pose);
     } else {
       this.drawLongsword(ctx, pose);
     }
@@ -156,6 +158,85 @@ export class WeaponRenderer {
       pose.tipPosition.y + pose.direction.y * 8,
     );
     ctx.stroke();
+  }
+
+  private static drawZweihander(ctx: CanvasRenderingContext2D, pose: WeaponPose): void {
+    const bladeWidth = pose.active ? 8 : 7;
+    const shoulder = {
+      x: pose.handPosition.x + pose.direction.x * 16,
+      y: pose.handPosition.y + pose.direction.y * 16,
+    };
+    const ricasso = {
+      x: pose.handPosition.x + pose.direction.x * 28,
+      y: pose.handPosition.y + pose.direction.y * 28,
+    };
+
+    ctx.strokeStyle = "#332719";
+    ctx.lineWidth = 11;
+    ctx.beginPath();
+    ctx.moveTo(pose.gripPosition.x, pose.gripPosition.y);
+    ctx.lineTo(pose.handPosition.x + pose.direction.x * 6, pose.handPosition.y + pose.direction.y * 6);
+    ctx.stroke();
+
+    if (pose.guardSegment) {
+      ctx.strokeStyle = "#9a8359";
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(pose.guardSegment.start.x, pose.guardSegment.start.y);
+      ctx.lineTo(pose.guardSegment.end.x, pose.guardSegment.end.y);
+      ctx.stroke();
+
+      ctx.strokeStyle = "#7f6a45";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(
+        pose.handPosition.x - pose.normal.x * 13 + pose.direction.x * 14,
+        pose.handPosition.y - pose.normal.y * 13 + pose.direction.y * 14,
+      );
+      ctx.lineTo(
+        pose.handPosition.x + pose.normal.x * 13 + pose.direction.x * 14,
+        pose.handPosition.y + pose.normal.y * 13 + pose.direction.y * 14,
+      );
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = "#5d5140";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(shoulder.x, shoulder.y);
+    ctx.lineTo(ricasso.x, ricasso.y);
+    ctx.stroke();
+
+    ctx.fillStyle = pose.active ? "#ded7c7" : "#b5ad9d";
+    ctx.beginPath();
+    ctx.moveTo(ricasso.x + pose.normal.x * bladeWidth, ricasso.y + pose.normal.y * bladeWidth);
+    ctx.lineTo(
+      pose.bladeEnd.x + pose.normal.x * 3,
+      pose.bladeEnd.y + pose.normal.y * 3,
+    );
+    ctx.lineTo(
+      pose.tipPosition.x + pose.direction.x * 10,
+      pose.tipPosition.y + pose.direction.y * 10,
+    );
+    ctx.lineTo(
+      pose.bladeEnd.x - pose.normal.x * 3,
+      pose.bladeEnd.y - pose.normal.y * 3,
+    );
+    ctx.lineTo(ricasso.x - pose.normal.x * bladeWidth, ricasso.y - pose.normal.y * bladeWidth);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255, 246, 220, 0.28)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ricasso.x, ricasso.y);
+    ctx.lineTo(pose.tipPosition.x, pose.tipPosition.y);
+    ctx.stroke();
+
+    ctx.fillStyle = "#2d2419";
+    ctx.beginPath();
+    ctx.arc(pose.gripPosition.x, pose.gripPosition.y, 5, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   private static drawAxe(ctx: CanvasRenderingContext2D, pose: WeaponPose): void {

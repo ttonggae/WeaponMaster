@@ -191,7 +191,7 @@ export class CharacterRenderer {
   ): Vec2 {
     if (weapon) {
       const offset =
-        player.weaponType === "spear" ? 34 : player.weaponType === "axe" ? 22 : 18;
+        player.weaponType === "spear" ? 34 : player.weaponType === "zweihander" ? 28 : player.weaponType === "axe" ? 22 : 18;
       return {
         x: weapon.handPosition.x - weapon.direction.x * offset,
         y: weapon.handPosition.y - weapon.direction.y * offset,

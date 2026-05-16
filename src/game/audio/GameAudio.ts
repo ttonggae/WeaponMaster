@@ -202,10 +202,10 @@ export class GameAudio {
   }
 
   private playWeaponSwing(weaponType: WeaponType, force = 1): void {
-    const weight = weaponType === "axe" ? 1.32 : weaponType === "spear" ? 0.86 : 1;
-    const frequency = weaponType === "spear" ? 820 : weaponType === "axe" ? 310 : 560;
+    const weight = weaponType === "axe" ? 1.32 : weaponType === "zweihander" ? 1.18 : weaponType === "spear" ? 0.86 : 1;
+    const frequency = weaponType === "spear" ? 820 : weaponType === "axe" ? 310 : weaponType === "zweihander" ? 430 : 560;
     this.playNoiseBurst(0.12 * weight, 0.034 * force * weight, frequency, 0.55);
-    this.playTone(weaponType === "axe" ? 72 : 110, 0.08 * weight, 0.026 * force, "sine");
+    this.playTone(weaponType === "axe" ? 72 : weaponType === "zweihander" ? 88 : 110, 0.08 * weight, 0.026 * force, "sine");
   }
 
   private playMetalClang(force: number, brightness: number): void {

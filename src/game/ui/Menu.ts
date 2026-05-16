@@ -5,6 +5,8 @@ import {
   PLAYER_MAX_HEALTH,
   PLAYER_MAX_STAMINA,
 } from "../constants";
+import type { Language } from "../i18n/Localization";
+import { specialLabel, t, weaponDescription, weaponLabel } from "../i18n/Localization";
 import type { LeaderboardEntry, WeaponDefinition, WeaponType } from "../types";
 import { WEAPON_TYPES } from "../weapons/weaponTypes";
 import { getWeaponData } from "../weapons/weaponData";
@@ -52,9 +54,26 @@ const LOCKED_ITEMS: LoadoutItem[] = [
 
 export class Menu {
   readonly root: HTMLDivElement;
+  private language: Language = "en";
   private selectedWeapon: WeaponType = "longsword";
   private selectedCategory: LoadoutItemKind = "weapon";
   private selectedItem: LoadoutItem = this.weaponToItem("longsword");
+  private signedInName: string | null = null;
+  private accountStatusText: string | null = null;
+  private currentScore: LeaderboardEntry | null = null;
+  private leaderboardEntries: LeaderboardEntry[] = [];
+  private readonly seasonBadge = document.createElement("div");
+  private readonly subtitle = document.createElement("p");
+  private readonly leaderboardTitle = document.createElement("h2");
+  private readonly loadoutButton = document.createElement("button");
+  private readonly rankedButton = document.createElement("button");
+  private readonly casualButton = document.createElement("button");
+  private readonly friendlyButton = document.createElement("button");
+  private readonly loadoutHeading = document.createElement("h2");
+  private readonly loadoutNote = document.createElement("p");
+  private readonly closeButton = document.createElement("button");
+  private readonly statTitle = document.createElement("h3");
+  private readonly categoryHeading = document.createElement("h3");
   private readonly accountLine = document.createElement("div");
   private readonly scoreLine = document.createElement("div");
   private readonly leaderboardList = document.createElement("ol");
@@ -72,7 +91,8 @@ export class Menu {
   private readonly weaponButtons = new Map<WeaponType, HTMLButtonElement>();
   private readonly categoryButtons = new Map<LoadoutItemKind, HTMLButtonElement>();
 
-  constructor(parent: HTMLElement, callbacks: MenuCallbacks) {
+  constructor(parent: HTMLElement, callbacks: MenuCallbacks, language: Language = "en") {
+    this.language = language;
     this.root = document.createElement("div");
     this.root.className = "menu-shell";
 
@@ -86,28 +106,18 @@ export class Menu {
     title.className = "menu-title";
     title.textContent = "WeaponMaster";
 
-    const season = document.createElement("div");
-    season.className = "season-badge";
-    season.textContent = `Season ${CURRENT_SEASON_NUMBER}: ${CURRENT_SEASON_NAME}`;
+    this.seasonBadge.className = "season-badge";
 
-    const subtitle = document.createElement("p");
-    subtitle.className = "menu-subtitle";
-    subtitle.textContent =
-      "Heavy medieval duels built around commitment, distance, stamina, and visible steel.";
+    this.subtitle.className = "menu-subtitle";
 
     this.accountLine.className = "account-line";
-    this.accountLine.textContent = "Google sign-in is restored automatically after the first login.";
-    titleBlock.append(title, season, subtitle, this.accountLine);
+    titleBlock.append(title, this.seasonBadge, this.subtitle, this.accountLine);
 
     const rankPanel = document.createElement("section");
     rankPanel.className = "leaderboard-panel";
-    const leaderboardTitle = document.createElement("h2");
-    leaderboardTitle.textContent = "Season Top 10";
     this.leaderboardList.className = "leaderboard-list";
-    this.leaderboardList.innerHTML = "<li>Loading rankings...</li>";
     this.scoreLine.className = "score-line";
-    this.scoreLine.textContent = "Score: not signed in";
-    rankPanel.append(leaderboardTitle, this.leaderboardList, this.scoreLine);
+    rankPanel.append(this.leaderboardTitle, this.leaderboardList, this.scoreLine);
 
     const matchPanel = document.createElement("section");
     matchPanel.className = "match-menu-panel";
@@ -115,32 +125,42 @@ export class Menu {
     this.equippedLine.className = "equipped-line";
     this.updateEquippedLine();
 
-    const loadoutButton = this.makeButton("Loadout", "secondary");
-    loadoutButton.addEventListener("click", () => this.openLoadout());
+    this.loadoutButton.className = "button secondary";
+    this.loadoutButton.type = "button";
+    this.loadoutButton.addEventListener("click", () => this.openLoadout());
 
     const actionGrid = document.createElement("div");
     actionGrid.className = "menu-actions";
-    const rankedButton = this.makeButton("Ranked Match", "primary");
-    rankedButton.addEventListener("click", () => {
+    this.rankedButton.className = "button primary";
+    this.rankedButton.type = "button";
+    this.rankedButton.addEventListener("click", () => {
       callbacks.onStartRanked(this.selectedWeapon);
     });
 
-    const casualButton = this.makeButton("Casual Match", "");
-    casualButton.addEventListener("click", () => {
+    this.casualButton.className = "button";
+    this.casualButton.type = "button";
+    this.casualButton.addEventListener("click", () => {
       callbacks.onStartCasual(this.selectedWeapon);
     });
 
-    const friendlyButton = this.makeButton("Friendly Match", "");
-    friendlyButton.addEventListener("click", () => {
+    this.friendlyButton.className = "button";
+    this.friendlyButton.type = "button";
+    this.friendlyButton.addEventListener("click", () => {
       callbacks.onOpenFriendly(this.selectedWeapon);
     });
 
-    actionGrid.append(rankedButton, casualButton, friendlyButton);
-    matchPanel.append(loadoutButton, this.equippedLine, actionGrid);
+    actionGrid.append(this.rankedButton, this.casualButton, this.friendlyButton);
+    matchPanel.append(this.loadoutButton, this.equippedLine, actionGrid);
 
     panel.append(titleBlock, rankPanel, matchPanel);
     this.root.append(panel, this.buildLoadoutOverlay());
     parent.append(this.root);
+    this.applyLanguage();
+    this.renderAccountLine();
+    this.setPlayerScore(null);
+    const loading = document.createElement("li");
+    loading.textContent = t(this.language, "loadingRankings");
+    this.leaderboardList.replaceChildren(loading);
     this.refreshLoadout();
   }
 
@@ -154,24 +174,32 @@ export class Menu {
   }
 
   setAccountName(name: string): void {
-    this.accountLine.textContent = `Signed in as ${name}`;
+    this.signedInName = name;
+    this.accountStatusText = null;
+    this.renderAccountLine();
   }
 
   setAccountStatus(text: string): void {
+    this.signedInName = null;
+    this.accountStatusText = text;
     this.accountLine.textContent = text;
   }
 
   setPlayerScore(entry: LeaderboardEntry | null): void {
+    this.currentScore = entry;
     if (!entry) {
-      this.scoreLine.textContent = "Your Score: not signed in";
+      this.scoreLine.textContent = t(this.language, "scoreNotSignedIn");
       return;
     }
-    this.scoreLine.textContent = `Your Score: ${entry.score} (${entry.wins}W/${entry.losses}L)`;
+    this.scoreLine.textContent = `${t(this.language, "scoreLabel")}: ${entry.score} (${entry.wins}${t(this.language, "winsShort")}/${entry.losses}${t(this.language, "lossesShort")})`;
   }
 
   setLeaderboard(entries: LeaderboardEntry[]): void {
+    this.leaderboardEntries = entries;
     if (entries.length === 0) {
-      this.leaderboardList.innerHTML = "<li>No ranked records yet.</li>";
+      const empty = document.createElement("li");
+      empty.textContent = t(this.language, "noRankRecords");
+      this.leaderboardList.replaceChildren(empty);
       return;
     }
 
@@ -180,12 +208,48 @@ export class Menu {
         const item = document.createElement("li");
         const name = document.createElement("span");
         const score = document.createElement("strong");
-        name.textContent = `${entry.displayName} (${entry.wins}W/${entry.losses}L)`;
+        name.textContent = `${entry.displayName} (${entry.wins}${t(this.language, "winsShort")}/${entry.losses}${t(this.language, "lossesShort")})`;
         score.textContent = String(entry.score);
         item.append(name, score);
         return item;
       }),
     );
+  }
+
+  setLanguage(language: Language): void {
+    this.language = language;
+    this.selectedItem = this.selectedItem.weaponType
+      ? this.weaponToItem(this.selectedItem.weaponType)
+      : this.lockedItemFor(this.selectedCategory);
+    this.applyLanguage();
+    this.refreshLoadout();
+    this.renderAccountLine();
+    this.setPlayerScore(this.currentScore);
+    this.setLeaderboard(this.leaderboardEntries);
+  }
+
+  private applyLanguage(): void {
+    this.seasonBadge.textContent = `${t(this.language, "season")} ${CURRENT_SEASON_NUMBER}: ${CURRENT_SEASON_NAME}`;
+    this.subtitle.textContent = t(this.language, "subtitle");
+    this.leaderboardTitle.textContent = t(this.language, "top10");
+    this.loadoutButton.textContent = t(this.language, "loadout");
+    this.rankedButton.textContent = t(this.language, "rankedMatch");
+    this.casualButton.textContent = t(this.language, "casualMatch");
+    this.friendlyButton.textContent = t(this.language, "friendlyMatch");
+    this.loadoutHeading.textContent = t(this.language, "loadout");
+    this.loadoutNote.textContent = t(this.language, "loadoutNote");
+    this.closeButton.textContent = t(this.language, "close");
+    this.statTitle.textContent = t(this.language, "currentStats");
+    this.categoryHeading.textContent = t(this.language, "equipmentType");
+    this.updateEquippedLine();
+  }
+
+  private renderAccountLine(): void {
+    if (this.signedInName) {
+      this.accountLine.textContent = `${t(this.language, "signedInAs")} ${this.signedInName}`;
+      return;
+    }
+    this.accountLine.textContent = this.accountStatusText ?? t(this.language, "accountAuto");
   }
 
   private buildLoadoutOverlay(): HTMLElement {
@@ -197,14 +261,11 @@ export class Menu {
     const header = document.createElement("header");
     header.className = "loadout-header";
     const title = document.createElement("div");
-    const heading = document.createElement("h2");
-    heading.textContent = "Loadout";
-    const note = document.createElement("p");
-    note.textContent = "Weapon is active now. Armor, gear, and passive slots are locked for later seasons.";
-    title.append(heading, note);
-    const close = this.makeButton("Close", "ghost");
-    close.addEventListener("click", () => this.closeLoadout());
-    header.append(title, close);
+    title.append(this.loadoutHeading, this.loadoutNote);
+    this.closeButton.type = "button";
+    this.closeButton.className = "button ghost";
+    this.closeButton.addEventListener("click", () => this.closeLoadout());
+    header.append(title, this.closeButton);
 
     const body = document.createElement("div");
     body.className = "loadout-body";
@@ -225,18 +286,14 @@ export class Menu {
 
     const statPanel = document.createElement("section");
     statPanel.className = "loadout-stat-panel";
-    const statTitle = document.createElement("h3");
-    statTitle.textContent = "Current Stats";
     this.statGrid.className = "stat-grid";
-    statPanel.append(statTitle, this.statGrid);
+    statPanel.append(this.statTitle, this.statGrid);
     characterPanel.append(this.characterPreview, statPanel);
 
     const categoryPanel = document.createElement("section");
     categoryPanel.className = "loadout-categories";
-    const categoryTitle = document.createElement("h3");
-    categoryTitle.textContent = "Equipment Type";
     this.categoryList.className = "category-list";
-    categoryPanel.append(categoryTitle, this.categoryList);
+    categoryPanel.append(this.categoryHeading, this.categoryList);
     this.buildCategoryButtons();
 
     const selectionPanel = document.createElement("section");
@@ -262,19 +319,14 @@ export class Menu {
   }
 
   private buildCategoryButtons(): void {
-    const categories: Array<[LoadoutItemKind, string]> = [
-      ["weapon", "Weapon"],
-      ["gear", "Usable Gear"],
-      ["armor", "Armor"],
-      ["passive", "Passive"],
-    ];
+    const categories: LoadoutItemKind[] = ["weapon", "gear", "armor", "passive"];
 
     this.categoryList.replaceChildren(
-      ...categories.map(([kind, label]) => {
+      ...categories.map((kind) => {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "category-button";
-        button.textContent = label;
+        button.textContent = this.categoryTitle(kind);
         button.addEventListener("click", () => this.selectCategory(kind));
         this.categoryButtons.set(kind, button);
         return button;
@@ -289,7 +341,7 @@ export class Menu {
     button.classList.toggle("selected", item.id === this.selectedItem.id);
     const type = document.createElement("span");
     const name = document.createElement("strong");
-    type.textContent = item.kind;
+    type.textContent = this.categoryTitle(item.kind);
     name.textContent = item.label;
     button.append(type, name);
     button.addEventListener("click", () => this.selectItem(item));
@@ -332,11 +384,11 @@ export class Menu {
       this.selectedItem.weaponType === undefined ||
       this.selectedItem.weaponType === this.selectedWeapon;
     if (this.selectedItem.locked) {
-      this.equipButton.textContent = "Locked";
+      this.equipButton.textContent = t(this.language, "locked");
     } else if (this.selectedItem.weaponType === this.selectedWeapon) {
-      this.equipButton.textContent = "Equipped";
+      this.equipButton.textContent = t(this.language, "equipped");
     } else {
-      this.equipButton.textContent = "Equip";
+      this.equipButton.textContent = t(this.language, "equip");
     }
 
     for (const [weaponType, button] of this.weaponButtons) {
@@ -347,10 +399,10 @@ export class Menu {
 
   private refreshCategoryState(): void {
     const labels: Record<LoadoutItemKind, string> = {
-      weapon: `Weapon: ${getWeaponData(this.selectedWeapon).label}`,
-      gear: "Usable Gear: Locked",
-      armor: "Armor: Locked",
-      passive: "Passive: Locked",
+      weapon: `${t(this.language, "weapon")}: ${weaponLabel(this.selectedWeapon, this.language)}`,
+      gear: `${t(this.language, "usableGear")}: ${t(this.language, "locked")}`,
+      armor: `${t(this.language, "armor")}: ${t(this.language, "locked")}`,
+      passive: `${t(this.language, "passive")}: ${t(this.language, "locked")}`,
     };
     this.categoryButtons.forEach((button, category) => {
       button.textContent = labels[category];
@@ -388,50 +440,49 @@ export class Menu {
 
   private baseStats(weapon: WeaponDefinition): Array<[string, string]> {
     return [
-      ["Health", String(PLAYER_MAX_HEALTH)],
-      ["Stamina", String(PLAYER_MAX_STAMINA)],
-      ["Move Speed", String(MOVE_SPEED)],
-      ["Weapon", weapon.label],
-      ["Damage", String(weapon.damage)],
-      ["Stamina Cost", String(weapon.staminaCost)],
-      ["Attack Speed", `${this.attackSpeed(weapon)} / sec`],
-      ["Range", String(weapon.range)],
-      ["Guard Damage", String(weapon.guardDamage)],
-      ["Stun", `${weapon.stun.toFixed(2)}s`],
+      [t(this.language, "health"), String(PLAYER_MAX_HEALTH)],
+      [t(this.language, "stamina"), String(PLAYER_MAX_STAMINA)],
+      [t(this.language, "moveSpeed"), String(MOVE_SPEED)],
+      [t(this.language, "weapon"), weaponLabel(weapon.type, this.language)],
+      [t(this.language, "damage"), String(weapon.damage)],
+      [t(this.language, "staminaCost"), String(weapon.staminaCost)],
+      [t(this.language, "attackSpeed"), `${this.attackSpeed(weapon)} / sec`],
+      [t(this.language, "range"), String(weapon.range)],
+      [t(this.language, "guardDamage"), String(weapon.guardDamage)],
+      [t(this.language, "stun"), `${weapon.stun.toFixed(2)}s`],
     ];
   }
 
   private itemStats(item: LoadoutItem): Array<[string, string]> {
     if (!item.weaponType) {
       return [
-        ["Status", item.locked ? "Locked" : "Available"],
-        ["Season", "Future"],
+        [t(this.language, "status"), item.locked ? t(this.language, "locked") : t(this.language, "available")],
+        [t(this.language, "seasonLabel"), t(this.language, "future")],
       ];
     }
     const weapon = getWeaponData(item.weaponType);
     return [
-      ["Damage", String(weapon.damage)],
-      ["Stamina Cost", String(weapon.staminaCost)],
-      ["Guard Damage", String(weapon.guardDamage)],
-      ["Range", String(weapon.range)],
-      ["Charge", `${weapon.chargeTime.toFixed(2)}s`],
-      ["Attack Speed", `${this.attackSpeed(weapon)} / sec`],
-      ["Recovery", `${weapon.timing.recovery.toFixed(2)}s`],
-      ["Knockback", String(weapon.knockback)],
-      ["Tracking", String(weapon.followSpeed)],
-      ["Special", weapon.special],
+      [t(this.language, "damage"), String(weapon.damage)],
+      [t(this.language, "staminaCost"), String(weapon.staminaCost)],
+      [t(this.language, "guardDamage"), String(weapon.guardDamage)],
+      [t(this.language, "range"), String(weapon.range)],
+      [t(this.language, "charge"), `${weapon.chargeTime.toFixed(2)}s`],
+      [t(this.language, "attackSpeed"), `${this.attackSpeed(weapon)} / sec`],
+      [t(this.language, "recovery"), `${weapon.timing.recovery.toFixed(2)}s`],
+      [t(this.language, "knockback"), String(weapon.knockback)],
+      [t(this.language, "tracking"), String(weapon.followSpeed)],
+      [t(this.language, "special"), specialLabel(weapon.special, this.language)],
     ];
   }
 
   private weaponToItem(weaponType: WeaponType): LoadoutItem {
-    const weapon = getWeaponData(weaponType);
     return {
       id: weaponType,
       kind: "weapon",
-      label: weapon.label,
+      label: weaponLabel(weaponType, this.language),
       locked: false,
       weaponType,
-      description: this.weaponDescription(weaponType),
+      description: weaponDescription(weaponType, this.language),
     };
   }
 
@@ -439,30 +490,45 @@ export class Menu {
     if (category === "weapon") {
       return this.weaponToItem(this.selectedWeapon);
     }
-    return LOCKED_ITEMS.find((item) => item.kind === category) ?? LOCKED_ITEMS[0];
+    const labels: Record<Exclude<LoadoutItemKind, "weapon">, string> = {
+      gear: t(this.language, "usableGear"),
+      armor: t(this.language, "armor"),
+      passive: t(this.language, "passive"),
+    };
+    const descriptions: Record<Exclude<LoadoutItemKind, "weapon">, string> = {
+      gear:
+        this.language === "ko"
+          ? "사용 장비와 소모품 슬롯은 추후 업데이트에서 해금됩니다."
+          : "Equipment and consumable utility slots are reserved for a future update.",
+      armor:
+        this.language === "ko"
+          ? "갑옷은 이후 방어력, 기력 압박, 이동 무게를 조정하게 됩니다."
+          : "Armor will later modify protection, stamina pressure, and movement weight.",
+      passive:
+        this.language === "ko"
+          ? "패시브 특성은 시즌 빌드와 무기 전문화를 결정하게 됩니다."
+          : "Passive traits will later define season builds and weapon specializations.",
+    };
+    const lockedCategory = category as Exclude<LoadoutItemKind, "weapon">;
+    const fallback = LOCKED_ITEMS.find((item) => item.kind === category) ?? LOCKED_ITEMS[0];
+    return {
+      ...fallback,
+      label: labels[lockedCategory],
+      description: descriptions[lockedCategory],
+    };
   }
 
   private categoryTitle(category: LoadoutItemKind): string {
     if (category === "weapon") {
-      return "Weapon Selection";
+      return t(this.language, "weaponSelection");
     }
     if (category === "gear") {
-      return "Usable Gear";
+      return t(this.language, "usableGear");
     }
     if (category === "armor") {
-      return "Armor";
+      return t(this.language, "armor");
     }
-    return "Passive";
-  }
-
-  private weaponDescription(weaponType: WeaponType): string {
-    if (weaponType === "longsword") {
-      return "Balanced dueling weapon with average reach, cost, speed, and flexible cut/thrust motion.";
-    }
-    if (weaponType === "spear") {
-      return "Long reach pressure weapon. Strong at distance, awkward up close, and focused on tip control.";
-    }
-    return "Heavy power weapon. Slow commitment, high damage, strong guard pressure, and heavy recovery.";
+    return t(this.language, "passive");
   }
 
   private attackSpeed(weapon: WeaponDefinition): string {
@@ -471,7 +537,7 @@ export class Menu {
   }
 
   private updateEquippedLine(): void {
-    this.equippedLine.textContent = `Equipped: ${getWeaponData(this.selectedWeapon).label}`;
+    this.equippedLine.textContent = `${t(this.language, "equipped")}: ${weaponLabel(this.selectedWeapon, this.language)}`;
   }
 
   private openLoadout(): void {

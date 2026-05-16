@@ -11,6 +11,8 @@ import { FriendlyRoomService } from "./firebase/FriendlyRoomService";
 import { MatchmakingService } from "./firebase/MatchmakingService";
 import { RankService } from "./firebase/RankService";
 import { SignalingService } from "./firebase/SignalingService";
+import type { Language } from "./i18n/Localization";
+import { loadLanguage, saveLanguage, t } from "./i18n/Localization";
 import { InputManager } from "./input/InputManager";
 import { LOCAL_PLAYER_KEYBINDS } from "./input/Keybinds";
 import type { NetMessage } from "./net/NetMessages";
@@ -38,6 +40,7 @@ export class Game {
   private readonly settingsPanel: SettingsPanel;
   private readonly audio = new GameAudio();
   private readonly clientSessionId = crypto.randomUUID();
+  private language: Language = loadLanguage();
   private p2p: P2PClient | null = null;
   private stateSync: StateSync | null = null;
   private localPlayerId: PlayerId = "p1";
@@ -62,22 +65,25 @@ export class Game {
 
   constructor(canvas: HTMLCanvasElement, uiRoot: HTMLElement) {
     this.renderer = new Renderer(canvas);
+    this.renderer.setLanguage(this.language);
     this.menu = new Menu(uiRoot, {
       onStartRanked: (localWeapon) => void this.startOnlineMatch("ranked", localWeapon),
       onStartCasual: (localWeapon) => void this.startOnlineMatch("casual", localWeapon),
       onOpenFriendly: (localWeapon) => this.openFriendlyPanel(localWeapon),
-    });
+    }, this.language);
     this.connectionPanel = new ConnectionPanel(uiRoot, {
       onCreateRoom: () => this.createFriendlyRoom(),
       onJoinRoom: (code) => this.joinFriendlyRoom(code),
       onBack: () => this.returnToMenu(),
-    });
+    }, this.language);
     this.matchOverlay = new MatchOverlay(uiRoot, {
       onCancel: () => this.cancelOnlineSearch(),
-    });
+    }, this.language);
     this.settingsPanel = new SettingsPanel(uiRoot, {
       initialVolume: this.audio.getVolumePercent(),
+      initialLanguage: this.language,
       onVolumeChange: (volumePercent) => this.audio.setVolumePercent(volumePercent),
+      onLanguageChange: (language) => this.setLanguage(language),
     });
     this.audio.setMenuActive(true);
 
@@ -153,18 +159,18 @@ export class Game {
     this.matchOverlay.show(
       undefined,
       matchType === "ranked"
-        ? "\uB7AD\uD06C \uC0C1\uB300\uB97C \uCC3E\uB294 \uC911\uC785\uB2C8\uB2E4."
-        : "\uC77C\uBC18 \uB300\uC804 \uC0C1\uB300\uB97C \uCC3E\uB294 \uC911\uC785\uB2C8\uB2E4.",
+        ? t(this.language, "findingRanked")
+        : t(this.language, "findingCasual"),
     );
 
     try {
       await this.startMatchmaking(matchType);
     } catch (error) {
       this.matchOverlay.show(
-        "\uB9E4\uCE6D \uC2E4\uD328",
+        t(this.language, "matchmakingFailed"),
         error instanceof Error
           ? error.message
-          : "\uB9E4\uCE6D\uC744 \uC2DC\uC791\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.",
+          : t(this.language, "matchmakingStartFailed"),
         true,
       );
     }
@@ -235,7 +241,7 @@ export class Game {
       return;
     }
 
-    this.matchOverlay.setDetail("\uB300\uAE30\uC5F4\uC5D0 \uB4F1\uB85D\uD588\uC2B5\uB2C8\uB2E4. \uC0C1\uB300\uB97C \uCC3E\uB294 \uC911...");
+    this.matchOverlay.setDetail(t(this.language, "queued"));
     this.matchmakingUnsubs.push(
       this.matchmakingService.watchMatchForPlayer(
         profile.uid,
@@ -286,7 +292,7 @@ export class Game {
     this.rankResultRecorded = false;
     this.matchOverlay.setCancelable(false);
     if (collectionName === "matchRooms") {
-      this.matchOverlay.show("Connecting P2P", "Opponent found. Exchanging connection data.", false);
+      this.matchOverlay.show(t(this.language, "connectingP2P"), t(this.language, "opponentFound"), false);
     } else {
       this.matchOverlay.hide();
     }
@@ -306,7 +312,7 @@ export class Game {
       }),
     );
 
-    this.connectionPanel.setStatus(room.code ? `Room created: ${room.code}` : "Exchanging offer");
+    this.connectionPanel.setStatus(room.code ? `${t(this.language, "roomCreated")}: ${room.code}` : t(this.language, "exchangingOffer"));
     const offer = await this.requireP2P().createOffer();
     await signaling.writeOffer(room.id, JSON.parse(offer) as RTCSessionDescriptionInit);
   }
@@ -328,7 +334,7 @@ export class Game {
     this.rankResultRecorded = false;
     this.matchOverlay.setCancelable(false);
     if (collectionName === "matchRooms") {
-      this.matchOverlay.show("Connecting P2P", "Opponent found. Exchanging connection data.", false);
+      this.matchOverlay.show(t(this.language, "connectingP2P"), t(this.language, "opponentFound"), false);
     } else {
       this.matchOverlay.hide();
     }
@@ -340,7 +346,7 @@ export class Game {
         return;
       }
       answered = true;
-      this.connectionPanel.setStatus("Exchanging answer");
+      this.connectionPanel.setStatus(t(this.language, "exchangingAnswer"));
       const answer = await this.requireP2P().createAnswerFromOffer(JSON.stringify(offer));
       await signaling.writeAnswer(room.id, JSON.parse(answer) as RTCSessionDescriptionInit);
     };
@@ -361,12 +367,12 @@ export class Game {
     if (room.offer) {
       await answerOffer(room.offer);
     } else {
-      this.connectionPanel.setStatus("Exchanging offer");
+      this.connectionPanel.setStatus(t(this.language, "exchangingOffer"));
     }
   }
 
   private async ensureFirebase(): Promise<FirebaseServices> {
-    this.connectionPanel.setStatus("Connecting to Firebase");
+    this.connectionPanel.setStatus(t(this.language, "connectingFirebase"));
     this.firebaseServices = this.firebaseServices ?? getFirebaseServices();
     if (!this.firebaseServices) {
       const missing = getMissingFirebaseEnvKeys();
@@ -397,13 +403,13 @@ export class Game {
     try {
       const profile = await new FirebaseAuthService(services).getCachedProfile();
       if (!profile) {
-        this.menu.setAccountStatus("Sign in with Google once to save score.");
+        this.menu.setAccountStatus(t(this.language, "signInOnce"));
         return;
       }
       this.authProfile = profile;
       await this.syncRankProfile(profile, services);
     } catch {
-      this.menu.setAccountStatus("Google sign-in will retry when online mode starts.");
+      this.menu.setAccountStatus(t(this.language, "signInRetry"));
     }
   }
 
@@ -533,8 +539,8 @@ export class Game {
       this.state.connectionStatus = "error";
       this.connectionPanel.hide();
       this.matchOverlay.show(
-        "Connection failed",
-        error instanceof Error ? error.message : "Failed to accept the matched room.",
+        t(this.language, "connectionFailed"),
+        error instanceof Error ? error.message : t(this.language, "acceptRoomFailed"),
         true,
       );
       this.menu.show();
@@ -557,7 +563,7 @@ export class Game {
       } catch (error) {
         this.stopMatchmakingPolling();
         this.matchOverlay.setDetail(
-          error instanceof Error ? `Matchmaking failed: ${error.message}` : "Matchmaking failed.",
+          error instanceof Error ? `${t(this.language, "matchmakingFailed")}: ${error.message}` : t(this.language, "matchmakingFailed"),
         );
       }
     };
@@ -604,7 +610,7 @@ export class Game {
     this.menu.show();
     this.audio.setGameActive(false);
     this.audio.setMenuActive(true);
-    this.matchOverlay.show("Connection failed", detail, true);
+    this.matchOverlay.show(t(this.language, "connectionFailed"), detail, true);
   }
 
   private async recordRankResultIfNeeded(): Promise<void> {
@@ -696,6 +702,16 @@ export class Game {
     } catch {
       // Cleanup is best effort; stale rooms are also removed by TTL cleanup.
     }
+  }
+
+  private setLanguage(language: Language): void {
+    this.language = language;
+    saveLanguage(language);
+    this.renderer.setLanguage(language);
+    this.menu.setLanguage(language);
+    this.connectionPanel.setLanguage(language);
+    this.matchOverlay.setLanguage(language);
+    this.settingsPanel.setLanguage(language);
   }
 
   private getMouseAim(): { x: number; y: number } {

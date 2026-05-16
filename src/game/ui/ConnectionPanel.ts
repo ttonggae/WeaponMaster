@@ -1,3 +1,6 @@
+import type { Language } from "../i18n/Localization";
+import { t } from "../i18n/Localization";
+
 interface ConnectionCallbacks {
   onCreateRoom: () => Promise<string>;
   onJoinRoom: (code: string) => Promise<void>;
@@ -6,46 +9,54 @@ interface ConnectionCallbacks {
 
 export class ConnectionPanel {
   readonly root: HTMLElement;
+  private language: Language;
+  private readonly title = document.createElement("h2");
   private readonly status = document.createElement("div");
   private readonly roomCode = document.createElement("input");
+  private readonly roomCodeLabel = document.createElement("span");
+  private readonly createButton = document.createElement("button");
+  private readonly joinButton = document.createElement("button");
+  private readonly backButton = document.createElement("button");
 
-  constructor(parent: HTMLElement, private readonly callbacks: ConnectionCallbacks) {
+  constructor(parent: HTMLElement, private readonly callbacks: ConnectionCallbacks, language: Language = "en") {
+    this.language = language;
     this.root = document.createElement("aside");
     this.root.className = "connection-panel hidden";
 
     const stack = document.createElement("div");
     stack.className = "stack";
 
-    const title = document.createElement("h2");
-    title.className = "panel-title";
-    title.textContent = "Friendly Match";
+    this.title.className = "panel-title";
 
     this.status.className = "status-line";
-    this.status.textContent = "Create a room code or join with a 6-character code.";
 
     this.roomCode.placeholder = "ABC123";
     this.roomCode.maxLength = 6;
     this.roomCode.className = "weapon-select";
 
-    const createRoom = this.makeButton("Create Room", "primary");
-    createRoom.addEventListener("click", () => this.createRoom());
+    this.createButton.className = "button primary";
+    this.createButton.type = "button";
+    this.createButton.addEventListener("click", () => this.createRoom());
 
-    const joinRoom = this.makeButton("Join Room", "");
-    joinRoom.addEventListener("click", () => this.joinRoom());
+    this.joinButton.className = "button";
+    this.joinButton.type = "button";
+    this.joinButton.addEventListener("click", () => this.joinRoom());
 
-    const back = this.makeButton("Back To Menu", "ghost");
-    back.addEventListener("click", () => this.callbacks.onBack());
+    this.backButton.className = "button ghost";
+    this.backButton.type = "button";
+    this.backButton.addEventListener("click", () => this.callbacks.onBack());
 
     stack.append(
-      title,
+      this.title,
       this.status,
-      this.makeInputField("6-character Room Code", this.roomCode),
-      createRoom,
-      joinRoom,
-      back,
+      this.makeInputField(this.roomCode),
+      this.createButton,
+      this.joinButton,
+      this.backButton,
     );
     this.root.append(stack);
     parent.append(this.root);
+    this.setLanguage(this.language);
   }
 
   show(): void {
@@ -64,40 +75,42 @@ export class ConnectionPanel {
     this.status.textContent = text;
   }
 
+  setLanguage(language: Language): void {
+    this.language = language;
+    this.title.textContent = t(language, "friendlyMatch");
+    this.roomCodeLabel.textContent = t(language, "roomCodeLabel");
+    this.createButton.textContent = t(language, "createRoom");
+    this.joinButton.textContent = t(language, "joinRoom");
+    this.backButton.textContent = t(language, "backToMenu");
+    if (!this.status.textContent) {
+      this.status.textContent = t(language, "friendlyHelp");
+    }
+  }
+
   private async createRoom(): Promise<void> {
     try {
-      this.setStatus("Creating room...");
+      this.setStatus(t(this.language, "creatingRoom"));
       const code = await this.callbacks.onCreateRoom();
       this.roomCode.value = code;
-      this.setStatus(`Room created: ${code}`);
+      this.setStatus(`${t(this.language, "roomCreated")}: ${code}`);
     } catch (error) {
-      this.setStatus(error instanceof Error ? error.message : "Failed to create room.");
+      this.setStatus(error instanceof Error ? error.message : t(this.language, "createRoomFailed"));
     }
   }
 
   private async joinRoom(): Promise<void> {
     try {
-      this.setStatus("Joining room...");
+      this.setStatus(t(this.language, "joiningRoom"));
       await this.callbacks.onJoinRoom(this.roomCode.value);
     } catch (error) {
-      this.setStatus(error instanceof Error ? error.message : "Failed to join room.");
+      this.setStatus(error instanceof Error ? error.message : t(this.language, "joinRoomFailed"));
     }
   }
 
-  private makeInputField(labelText: string, field: HTMLInputElement): HTMLLabelElement {
+  private makeInputField(field: HTMLInputElement): HTMLLabelElement {
     const label = document.createElement("label");
     label.className = "field-label";
-    const span = document.createElement("span");
-    span.textContent = labelText;
-    label.append(span, field);
+    label.append(this.roomCodeLabel, field);
     return label;
-  }
-
-  private makeButton(text: string, variant: string): HTMLButtonElement {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `button ${variant}`.trim();
-    button.textContent = text;
-    return button;
   }
 }

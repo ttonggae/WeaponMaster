@@ -177,16 +177,16 @@ export class WeaponPoseSystem {
 
   private static poseBlendSpeed(player: PlayerState): number {
     if (player.action === "attack") {
-      return player.weaponType === "axe" ? 18 : player.weaponType === "spear" ? 22 : 24;
+      return player.weaponType === "axe" ? 18 : player.weaponType === "spear" ? 22 : player.weaponType === "zweihander" ? 19 : 24;
     }
     if (player.action === "parry") {
       return 34;
     }
     if (player.action === "charge") {
-      return player.weaponType === "axe" ? 8 : player.weaponType === "spear" ? 10 : 11;
+      return player.weaponType === "axe" ? 8 : player.weaponType === "spear" ? 10 : player.weaponType === "zweihander" ? 8.5 : 11;
     }
     if (player.action === "recovery") {
-      return player.weaponType === "axe" ? 6 : 9;
+      return player.weaponType === "axe" ? 6 : player.weaponType === "zweihander" ? 7 : 9;
     }
     if (player.action === "guard") {
       return 14;
@@ -203,7 +203,7 @@ export class WeaponPoseSystem {
   private static chargeIntent(player: PlayerState): PoseIntent {
     const data = getWeaponData(player.weaponType);
     const t = smoothstep(clamp(player.actionTime / data.chargeTime, 0, 1));
-    if (player.weaponType === "longsword" && player.attackVariant === "thrust") {
+    if (this.isSwordLike(player) && player.attackVariant === "thrust") {
       return {
         angle: player.attackBaseAngle,
         handOffset: {
@@ -213,8 +213,8 @@ export class WeaponPoseSystem {
       };
     }
     const draw =
-      player.weaponType === "axe" ? 0.82 : player.weaponType === "spear" ? 0.16 : 0.5;
-    const readyY = player.weaponType === "axe" ? -126 : player.weaponType === "spear" ? -112 : -120;
+      player.weaponType === "axe" ? 0.82 : player.weaponType === "spear" ? 0.16 : player.weaponType === "zweihander" ? 0.62 : 0.5;
+    const readyY = player.weaponType === "axe" ? -126 : player.weaponType === "spear" ? -112 : player.weaponType === "zweihander" ? -124 : -120;
     const readyX = player.weaponType === "spear" ? 4 : -2;
     return {
       angle: player.attackBaseAngle - player.attackSwingSign * draw * t,
@@ -244,12 +244,13 @@ export class WeaponPoseSystem {
         handOffset: { x: lerp(-4, 38, t), y: lerp(-126, -108, t) },
       };
     }
-    if (player.weaponType === "longsword" && player.attackVariant === "thrust") {
+    if (this.isSwordLike(player) && player.attackVariant === "thrust") {
       return {
         angle: player.attackBaseAngle,
-        handOffset: { x: lerp(2, 58, t), y: lerp(-115, -112, t) },
+        handOffset: { x: lerp(2, player.weaponType === "zweihander" ? 50 : 58, t), y: lerp(-115, -112, t) },
       };
     }
+    const reach = player.weaponType === "zweihander" ? 42 : 36;
     const swingStart =
       player.attackVariant === "overhead" ? -player.attackSwingSign * 0.92 : -player.attackSwingSign * 0.68;
     const swingEnd =
@@ -258,7 +259,7 @@ export class WeaponPoseSystem {
       angle:
         player.attackBaseAngle +
         lerp(swingStart, swingEnd, t),
-      handOffset: { x: lerp(4, 36, t), y: lerp(-120, -110, t) },
+      handOffset: { x: lerp(4, reach, t), y: lerp(-120, player.weaponType === "zweihander" ? -108 : -110, t) },
     };
   }
 
@@ -266,7 +267,7 @@ export class WeaponPoseSystem {
     const t = smoothstep(
       player.recoverySeconds > 0 ? clamp(player.actionTime / player.recoverySeconds, 0, 1) : 1,
     );
-    const drop = player.weaponType === "axe" ? 0.5 : 0.28;
+    const drop = player.weaponType === "axe" ? 0.5 : player.weaponType === "zweihander" ? 0.38 : 0.28;
     return {
       angle: player.weaponAngle + player.attackSwingSign * lerp(drop, 0, t),
       handOffset: {
@@ -305,17 +306,18 @@ export class WeaponPoseSystem {
     handPosition: Vec2,
     normal: Vec2,
   ): Segment | undefined {
-    if (player.weaponType !== "longsword") {
+    if (!this.isSwordLike(player)) {
       return undefined;
     }
+    const size = player.weaponType === "zweihander" ? 21 : 17;
     return {
       start: {
-        x: handPosition.x - normal.x * 17,
-        y: handPosition.y - normal.y * 17,
+        x: handPosition.x - normal.x * size,
+        y: handPosition.y - normal.y * size,
       },
       end: {
-        x: handPosition.x + normal.x * 17,
-        y: handPosition.y + normal.y * 17,
+        x: handPosition.x + normal.x * size,
+        y: handPosition.y + normal.y * size,
       },
       radius: 4,
     };
@@ -362,12 +364,13 @@ export class WeaponPoseSystem {
     direction: Vec2,
     headSegment?: Segment,
   ): Segment {
-    if (player.weaponType === "longsword") {
+    if (this.isSwordLike(player)) {
       if (player.attackVariant === "thrust" && player.action === "attack") {
+        const thrustLength = player.weaponType === "zweihander" ? 52 : 42;
         return {
           start: {
-            x: bladeSegment.end.x - direction.x * 42,
-            y: bladeSegment.end.y - direction.y * 42,
+            x: bladeSegment.end.x - direction.x * thrustLength,
+            y: bladeSegment.end.y - direction.y * thrustLength,
           },
           end: bladeSegment.end,
           radius: bladeSegment.radius + 2,
@@ -407,10 +410,17 @@ export class WeaponPoseSystem {
     if (player.weaponType === "longsword") {
       return 3;
     }
+    if (player.weaponType === "zweihander") {
+      return 4;
+    }
     if (player.weaponType === "spear") {
       return 4;
     }
     return 5;
+  }
+
+  private static isSwordLike(player: PlayerState): boolean {
+    return player.weaponType === "longsword" || player.weaponType === "zweihander";
   }
 
   private static isDamageActive(player: PlayerState): boolean {
