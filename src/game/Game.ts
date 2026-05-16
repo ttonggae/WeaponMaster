@@ -59,6 +59,7 @@ export class Game {
   private activeSignalingRoomId: string | null = null;
   private activeSignalingCollection: "friendlyRooms" | "matchRooms" | null = null;
   private signalingCleanupTimer: number | null = null;
+  private p2pConnectTimeoutId: number | null = null;
   private duelStartedForConnection = false;
   private currentMatchType: MatchType | null = null;
   private rankResultRecorded = false;
@@ -203,6 +204,7 @@ export class Game {
       this.state.connectionStatus = status;
       this.connectionPanel.setStatus(detail ? `${status}: ${detail}` : status);
       if (status === "connected") {
+        this.clearP2PConnectTimeout();
         this.beginConnectedDuel();
         this.trySendReady();
         this.connectionPanel.hide();
@@ -290,6 +292,7 @@ export class Game {
     this.activeSignalingCollection = collectionName;
     this.currentMatchType = room.matchType ?? this.currentMatchType;
     this.rankResultRecorded = false;
+    this.startP2PConnectTimeout(collectionName);
     this.matchOverlay.setCancelable(false);
     if (collectionName === "matchRooms") {
       this.matchOverlay.show(t(this.language, "connectingP2P"), t(this.language, "opponentFound"), false);
@@ -332,6 +335,7 @@ export class Game {
     this.activeSignalingCollection = collectionName;
     this.currentMatchType = room.matchType ?? this.currentMatchType;
     this.rankResultRecorded = false;
+    this.startP2PConnectTimeout(collectionName);
     this.matchOverlay.setCancelable(false);
     if (collectionName === "matchRooms") {
       this.matchOverlay.show(t(this.language, "connectingP2P"), t(this.language, "opponentFound"), false);
@@ -463,6 +467,7 @@ export class Game {
   }
 
   private closeP2P(): void {
+    this.clearP2PConnectTimeout();
     this.stopMatchmakingPolling();
     this.clearMatchmakingWatchers();
     void this.cleanupActiveSignalingRoom();
@@ -611,6 +616,28 @@ export class Game {
     this.audio.setGameActive(false);
     this.audio.setMenuActive(true);
     this.matchOverlay.show(t(this.language, "connectionFailed"), detail, true);
+  }
+
+  private startP2PConnectTimeout(collectionName: "friendlyRooms" | "matchRooms"): void {
+    this.clearP2PConnectTimeout();
+    if (collectionName !== "matchRooms") {
+      return;
+    }
+
+    this.p2pConnectTimeoutId = window.setTimeout(() => {
+      if (this.state.connectionStatus === "connected" || this.duelStartedForConnection) {
+        return;
+      }
+      void this.handleP2PConnectionFailure(t(this.language, "connectionTimeout"));
+    }, 10000);
+  }
+
+  private clearP2PConnectTimeout(): void {
+    if (this.p2pConnectTimeoutId === null) {
+      return;
+    }
+    window.clearTimeout(this.p2pConnectTimeoutId);
+    this.p2pConnectTimeoutId = null;
   }
 
   private async recordRankResultIfNeeded(): Promise<void> {

@@ -60,6 +60,7 @@ Manual checks:
 - Ranked/Casual immediately start matchmaking and show the centered matchmaking overlay.
 - Matchmaking cancel must only be available while actively searching, not after a room has been accepted.
 - Matchmaking must ignore stale rooms from older sessions and must not enter the duel until WebRTC DataChannel connection is established.
+- Matched WebRTC setup must fail back to menu after about 10 seconds if the DataChannel never connects.
 - Friendly Match opens only the 6-character room-code panel.
 - Google sign-in starts when entering an online mode.
 - Season Top 10 renders when Firebase/Firestore rules are configured.
@@ -100,7 +101,7 @@ Manual checks:
 - Guard succeeds when the incoming attack sweep intersects the defender's visible guarding weapon.
 - Parry succeeds only during the short parry window when the incoming attack sweep intersects the defender's visible parry weapon, then counters for 1.5x defender weapon damage.
 - Feint is allowed only during attack charge and must return directly to idle with smooth pose blending and no recovery lockout.
-- Guard break uses the visible weapon grip/shaft strike zone, only affects guarding opponents, applies a 5 second breakable stun, and should start quickly enough to be usable while still being readable.
+- Guard break uses the visible weapon grip/shaft strike zone, follows current mouse aim with heavy interpolation, only affects guarding opponents, applies a 5 second breakable stun, and should start quickly enough to be usable while still being readable.
 - Guard break stun must clear immediately when the stunned player is hit by an attack.
 - Kick is primarily a spacing/knockback action, not a high-damage tool.
 - Kick hit detection must use the rendered extended leg/foot position, not torso center distance.
@@ -168,6 +169,7 @@ Manual checks:
 - Attack, guard, parry, feint, guard break, guard impact, and kick work.
 - Visible weapon geometry drives hit detection.
 - Firebase matchmaking, friendly room, signaling, Google auth, and rank service fail gracefully without config.
+- Matched WebRTC setup has a 10 second failure timeout before returning to menu.
 - Season Top 10 leaderboard exists.
 - Current player score is displayed and persisted from a 1000 point default.
 - Code is separated by responsibility.

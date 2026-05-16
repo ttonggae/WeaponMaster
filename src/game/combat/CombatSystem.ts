@@ -202,12 +202,10 @@ export class CombatSystem {
       speed *= 0.5;
     } else if (player.action === "recovery" || player.action === "feint") {
       speed = data.recoveryFollowSpeed;
-    } else if (
-      player.action === "charge" ||
-      player.action === "attack" ||
-      player.action === "guardBreak"
-    ) {
+    } else if (player.action === "charge" || player.action === "attack") {
       speed = 0;
+    } else if (player.action === "guardBreak") {
+      speed *= 0.35;
     } else if (player.action === "stunned") {
       speed *= 0.25;
     }

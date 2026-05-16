@@ -123,9 +123,10 @@ export class WeaponPoseSystem {
     }
     if (player.action === "guardBreak") {
       const t = smoothstep(clamp(player.actionTime / GUARD_BREAK_ACTIVE_END, 0, 1));
+      const height = clamp((player.weaponAngle + 1.05) / 2.1, 0, 1);
       return {
-        angle: lerpAngle(player.weaponAngle, Math.PI - 0.18, t),
-        handOffset: { x: lerp(14, 64, t), y: lerp(-116, -108, t) },
+        angle: lerpAngle(player.weaponAngle, player.weaponAngle + Math.PI, t),
+        handOffset: { x: lerp(14, 64, t), y: lerp(-118, lerp(-128, -100, height), t) },
       };
     }
     if (player.action === "stunned") {

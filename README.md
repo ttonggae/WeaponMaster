@@ -97,6 +97,7 @@ Rank writes are client-side in this MVP, so they are not cheat-proof. The rank s
 - Friendly room code UI opens in the center of the screen.
 - Matchmaking UI is hidden once WebRTC connects and the duel begins.
 - The matchmaking cancel action is removed as soon as an opponent is accepted and the duel scene starts.
+- If a matched WebRTC connection does not reach the duel within 10 seconds, the client tears down the room and returns to the menu with a connection failure message.
 - Matchmaking ignores stale rooms from older browser sessions, separates queue watchers from signaling watchers, and only enters the duel after the WebRTC DataChannel is connected on that client.
 - Current player score and Season Top 10 leaderboard are shown on the main menu when Firebase is configured.
 - Google sign-in replaces anonymous auth to avoid confusing player identity.
@@ -105,7 +106,7 @@ Rank writes are client-side in this MVP, so they are not cheat-proof. The rank s
 - Health, stamina, charge, attack, guard, parry, feint, kick, stun, hitstop, camera shake, and impact effects.
 - Parry counters an incoming attack for 1.5x the defender weapon damage.
 - Feint cancels charge directly back to idle, with pose blending but no recovery lockout.
-- Guard break uses the weapon grip/shaft as its visible strike data. It is faster than the first MVP version, but still only affects guarding opponents, causing a 5 second breakable stun that ends early if the stunned player is hit.
+- Guard break uses the weapon grip/shaft as its visible strike data. It is faster than the first MVP version, follows mouse aim with heavy interpolation, and still only affects guarding opponents, causing a 5 second breakable stun that ends early if the stunned player is hit.
 - In-game action transitions and hit, guard, parry, clash, kick, and dust effects trigger matching procedural sound effects.
 - In-game action and impact sounds are boosted 1.5x above the shared Settings volume so combat reads more clearly than menu ambience.
 - `WeaponPoseSystem` calculates fixed-length weapon pose data shared by character posing, weapon rendering, and hit detection.
@@ -194,7 +195,7 @@ The game intentionally keeps the characters as simple rigid parts: head, torso, 
 
 Left click starts a fixed attack sequence: charge, attack, recovery, then idle. Holding left click does not hold charge. Feint is only valid during the short charge window before the attack becomes active, and a successful feint returns directly to idle so the player can act again immediately.
 
-Guard break is not a universal damage tool. The move reverses the weapon posture and drives the grip or shaft end forward; its `strikeZone` is the same handle segment drawn by the renderer. It now starts faster than the first MVP version, but if it connects against a guarding opponent, it causes a 5 second stun that is cancelled immediately by the next incoming hit. If the opponent is not guarding, the move has no combat effect beyond its stamina cost and recovery.
+Guard break is not a universal damage tool. The move reverses the weapon posture and drives the grip or shaft end forward; its `strikeZone` is the same handle segment drawn by the renderer. It now starts faster than the first MVP version and follows the current mouse aim with heavy interpolation, so high/low guard break pressure is visible instead of fixed. If it connects against a guarding opponent, it causes a 5 second stun that is cancelled immediately by the next incoming hit. If the opponent is not guarding, the move has no combat effect beyond its stamina cost and recovery.
 
 Parry is an active counter, not only a block. If the defender's visible parry weapon intersects the incoming attack sweep during the parry window, the attacker takes 1.5x the defender weapon damage and their attack is interrupted.
 
@@ -233,9 +234,10 @@ Browser checks:
 13. Confirm the matchmaking cancel button disappears once an opponent is accepted and the duel scene starts.
 14. Confirm the connection panel/overlay hides after WebRTC connects.
 15. Confirm neither client enters the duel scene until its WebRTC DataChannel reaches connected state.
-16. Confirm Google auth creates a 1000 point score for a new player and shows it in the menu.
-17. Finish a ranked duel and confirm the personal score and Season Top 10 can update.
-18. Verify attack, guard, parry, guard break, kick, hit, guard, and clash events produce audible in-game cues.
+16. Force or simulate a failed matched connection and confirm it times out after about 10 seconds instead of waiting forever.
+17. Confirm Google auth creates a 1000 point score for a new player and shows it in the menu.
+18. Finish a ranked duel and confirm the personal score and Season Top 10 can update.
+19. Verify attack, guard, parry, guard break, kick, hit, guard, and clash events produce audible in-game cues.
 
 ## Future Structure
 
