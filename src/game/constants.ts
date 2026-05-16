@@ -66,5 +66,5 @@ export const CURRENT_SEASON_NUMBER = 1;
 export const CURRENT_SEASON_NAME = "Test Season";
 export const RANK_BASE_SCORE = 1000;
 export const RANK_WIN_SCORE = 25;
-export const RANK_LOSS_SCORE = 15;
+export const RANK_LOSS_SCORE = 25;
 export const LEADERBOARD_LIMIT = 10;

@@ -71,7 +71,7 @@ There is no local duel or manual copy/paste P2P entry point in the current UI. F
 - Current season display: `Season 1: Test Season`.
 - Base score: `1000`.
 - Win: `+25`.
-- Loss: `-15`.
+- Loss: `-25`.
 - Personal score storage: `rankScores/{seasonId}/players/{uid}`.
 - Leaderboard storage: `rankings/{seasonId}/players/{uid}`.
 - Leaderboard: top 10 ranked records for the current season.

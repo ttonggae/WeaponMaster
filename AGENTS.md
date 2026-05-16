@@ -121,7 +121,7 @@ Manual checks:
 
 - `CURRENT_SEASON_ID` in `constants.ts` selects the active season.
 - `CURRENT_SEASON_NUMBER` and `CURRENT_SEASON_NAME` define the menu-facing season label.
-- Ranked wins add score and ranked losses subtract score.
+- Ranked wins add 25 score and ranked losses subtract 25 score.
 - Personal score is stored under `rankScores/{seasonId}/players/{uid}`.
 - Public leaderboard records are stored under `rankings/{seasonId}/players/{uid}`.
 - Leaderboard queries only the top 10 records for the active season.
